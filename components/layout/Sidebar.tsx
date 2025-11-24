@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
 import {
   LayoutDashboard,
   Building2,
@@ -15,7 +16,6 @@ import {
   ChevronRight,
   Users,
   Shield,
-  Sparkles,
 } from 'lucide-react'
 
 interface NavItem {
@@ -78,27 +78,31 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
         'relative h-[72px] flex items-center border-b border-white/10',
         collapsed ? 'justify-center px-4' : 'justify-between px-6'
       )}>
-        <Link 
-          href={isAdmin ? '/admin/dashboard' : '/dashboard'} 
-          className="flex items-center gap-3 group"
+        <Link
+          href={isAdmin ? '/admin/dashboard' : '/dashboard'}
+          className="flex items-center gap-3 group transition-transform duration-300 hover:scale-105"
         >
-          {/* Logo Mark */}
-          <div className="relative">
-            <div className={cn(
-              'flex items-center justify-center rounded-xl bg-gradient-to-br from-stag-blue to-stag-blue-light transition-transform duration-300 group-hover:scale-105',
-              collapsed ? 'w-10 h-10' : 'w-11 h-11'
-            )}>
-              <Sparkles className="w-5 h-5 text-white" />
+          {collapsed ? (
+            /* Collapsed: Show only icon */
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden">
+              <Image
+                src="/images/stag-logo.svg"
+                alt="STAG Logo"
+                width={40}
+                height={40}
+                className="object-contain"
+              />
             </div>
-            {/* Glow effect */}
-            <div className="absolute inset-0 rounded-xl bg-stag-blue/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </div>
-          
-          {/* Logo Text */}
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-lg text-white tracking-tight">STAG</span>
-              <span className="text-[11px] text-white/50 font-medium tracking-wide">GOLDEN VISA</span>
+          ) : (
+            /* Expanded: Show full logo */
+            <div className="relative w-[240px] h-[48px]">
+              <Image
+                src="/images/stag-logo.svg"
+                alt="STAG Logo"
+                fill
+                className="object-contain object-left"
+                priority
+              />
             </div>
           )}
         </Link>

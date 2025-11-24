@@ -1,0 +1,25 @@
+<svg width="867" height="387" viewBox="0 0 867 387" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="867" height="387" fill="#6B9BD1"/>
+
+  <!-- Deer/Stag Icon Circle -->
+  <circle cx="180" cy="193" r="130" fill="none" stroke="white" stroke-width="8"/>
+
+  <!-- Deer Antlers and Head Silhouette -->
+  <path d="M180 120 L160 90 L150 100 L155 85 L145 75 L140 95 L130 80 L125 100 L115 90 L120 110 L110 105 L120 125 L130 120 L140 140 L150 135 L160 155 L170 150 L180 170"
+        stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M180 120 L200 90 L210 100 L205 85 L215 75 L220 95 L230 80 L235 100 L245 90 L240 110 L250 105 L240 125 L230 120 L220 140 L210 135 L200 155 L190 150 L180 170"
+        stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Deer Head -->
+  <ellipse cx="180" cy="200" rx="35" ry="50" fill="white"/>
+
+  <!-- Deer Snout -->
+  <path d="M180 220 L170 240 L180 245 L190 240 Z" fill="white"/>
+
+  <!-- Deer Neck -->
+  <path d="M160 235 L155 260 L180 270 L205 260 L200 235" fill="white"/>
+
+  <!-- STAG Text -->
+  <text x="370" y="250" font-family="serif" font-size="180" font-weight="300" fill="white" letter-spacing="40">STAG</text>
+</svg>
