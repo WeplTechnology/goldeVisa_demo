@@ -19,28 +19,13 @@ import {
   ArrowDownRight
 } from 'lucide-react'
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-
-// Mock data
-const monthlyReturnsData = [
-  { month: 'Jul 2024', returns: 850, projected: 850 },
-  { month: 'Aug 2024', returns: 1200, projected: 1200 },
-  { month: 'Sep 2024', returns: 1650, projected: 1650 },
-  { month: 'Oct 2024', returns: 2100, projected: 2100 },
-  { month: 'Nov 2024', returns: 2550, projected: 2550 },
-  { month: 'Dec 2024', returns: 3270, projected: 3400 },
-  { month: 'Jan 2025', returns: 0, projected: 4250 },
-  { month: 'Feb 2025', returns: 0, projected: 5100 },
-]
-
-const portfolioBreakdown = [
-  { name: 'Real Estate', value: 212500, percentage: 85 },
-  { name: 'R&D Investment', value: 37500, percentage: 15 }
-]
-
-const propertyPerformance = [
-  { property: 'Unit 4B', rent: 850, yield: 4.1, occupancy: 100 },
-  { property: 'Unit 4C', rent: 870, yield: 4.3, occupancy: 100 }
-]
+import { useEffect, useState } from 'react'
+import {
+  getPortfolioSummary,
+  getMonthlyReturnsData,
+  getPropertyPerformance,
+  getInvestorData
+} from '@/lib/actions/investor-actions'
 
 const COLORS = {
   primary: '#1B365D',
@@ -51,6 +36,54 @@ const COLORS = {
 
 export default function ReportsPage() {
   const { user, loading } = useAuth()
+  const [portfolioData, setPortfolioData] = useState<any>(null)
+  const [monthlyReturnsData, setMonthlyReturnsData] = useState<any[]>([])
+  const [portfolioBreakdown, setPortfolioBreakdown] = useState<any[]>([])
+  const [propertyPerformance, setPropertyPerformance] = useState<any[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
+
+  // Load reports data
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      try {
+        setDataLoading(true)
+        const [portfolio, returns, performance, investor] = await Promise.all([
+          getPortfolioSummary(),
+          getMonthlyReturnsData(),
+          getPropertyPerformance(),
+          getInvestorData()
+        ])
+
+        setPortfolioData(portfolio)
+        setMonthlyReturnsData(returns)
+        setPropertyPerformance(performance)
+
+        // Build portfolio breakdown from real data
+        if (investor) {
+          setPortfolioBreakdown([
+            {
+              name: 'Real Estate',
+              value: investor.real_estate_amount,
+              percentage: Math.round((investor.real_estate_amount / investor.investment_amount) * 100)
+            },
+            {
+              name: 'R&D Investment',
+              value: investor.rd_amount,
+              percentage: Math.round((investor.rd_amount / investor.investment_amount) * 100)
+            }
+          ])
+        }
+      } catch (error) {
+        console.error('Error loading reports data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
 
   if (loading) {
     return (
@@ -72,10 +105,12 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">YTD Returns</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">€3,270</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : `€${portfolioData?.cumulativeReturns?.toLocaleString() || '0'}`}
+                </p>
                 <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="w-3 h-3" />
-                  +15.2% vs projected
+                  Cumulative returns
                 </p>
               </div>
               <div className="icon-container-success">
@@ -90,7 +125,9 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Avg Monthly</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">€1,720</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : `€${portfolioData?.monthlyRent?.toLocaleString() || '0'}`}
+                </p>
                 <p className="text-xs text-gray-500 mt-1">Rental income</p>
               </div>
               <div className="icon-container-primary">
@@ -105,10 +142,12 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Annual Yield</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">4.2%</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : `${portfolioData?.annualYield?.toFixed(1) || '0'}%`}
+                </p>
                 <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="w-3 h-3" />
-                  Above target
+                  On investment
                 </p>
               </div>
               <div className="icon-container-default">
@@ -123,8 +162,10 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">€253.2k</p>
-                <p className="text-xs text-gray-500 mt-1">+1.3% appreciation</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : `€${((portfolioData?.totalInvestment || 0) / 1000).toFixed(1)}k`}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Investment portfolio</p>
               </div>
               <div className="icon-container-primary">
                 <PieChartIcon className="w-6 h-6 text-white" />
@@ -270,9 +311,20 @@ export default function ReportsPage() {
                 Individual unit metrics and returns
               </p>
             </div>
-            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-              100% OCCUPIED
-            </Badge>
+            {dataLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-stag-blue" />
+            ) : (
+              <Badge className={
+                propertyPerformance.length > 0 && propertyPerformance.every(p => p.occupancy === 100)
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                  : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+              }>
+                {propertyPerformance.length > 0 && propertyPerformance.every(p => p.occupancy === 100)
+                  ? '100% OCCUPIED'
+                  : `${Math.round(propertyPerformance.reduce((acc, p) => acc + p.occupancy, 0) / propertyPerformance.length)}% OCCUPIED`
+                }
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -288,37 +340,57 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {propertyPerformance.map((prop, index) => (
-                  <tr key={index} className="border-b border-gray-50 hover:bg-stag-light/30 transition-colors">
-                    <td className="py-4 px-4">
-                      <p className="font-semibold text-stag-navy">{prop.property}</p>
-                      <p className="text-xs text-gray-500">Via Garibaldi 23, Milano</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="font-bold text-stag-navy">€{prop.rent}</p>
-                      <p className="text-xs text-gray-500">per month</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="font-semibold text-emerald-600">{prop.yield}%</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-full max-w-[100px] h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full"
-                            style={{ width: `${prop.occupancy}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-600">{prop.occupancy}%</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                        RENTED
-                      </Badge>
+                {dataLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-stag-blue mx-auto" />
                     </td>
                   </tr>
-                ))}
+                ) : propertyPerformance.length > 0 ? (
+                  propertyPerformance.map((prop, index) => (
+                    <tr key={index} className="border-b border-gray-50 hover:bg-stag-light/30 transition-colors">
+                      <td className="py-4 px-4">
+                        <p className="font-semibold text-stag-navy">{prop.property}</p>
+                        <p className="text-xs text-gray-500">{prop.address}</p>
+                      </td>
+                      <td className="py-4 px-4">
+                        <p className="font-bold text-stag-navy">€{prop.rent?.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">per month</p>
+                      </td>
+                      <td className="py-4 px-4">
+                        <p className="font-semibold text-emerald-600">{prop.yield?.toFixed(1)}%</p>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-full max-w-[100px] h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full"
+                              style={{ width: `${prop.occupancy}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-600">{prop.occupancy}%</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <Badge className={
+                          prop.status === 'rented'
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                            : prop.status === 'available'
+                            ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                            : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                        }>
+                          {prop.status?.toUpperCase() || 'N/A'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
+                      No properties assigned yet
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

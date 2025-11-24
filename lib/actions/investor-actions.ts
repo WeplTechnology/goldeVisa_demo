@@ -210,3 +210,64 @@ export async function getPortfolioSummary() {
     monthsSinceStart,
   }
 }
+
+/**
+ * Get monthly returns data for charts
+ * Generates historical and projected data based on visa start date
+ */
+export async function getMonthlyReturnsData() {
+  const investor = await getInvestorData()
+  const monthlyRent = await getTotalMonthlyRent()
+
+  if (!investor || !investor.visa_start_date) {
+    return []
+  }
+
+  const visaStartDate = new Date(investor.visa_start_date)
+  const today = new Date()
+  const data: Array<{ month: string; returns: number; projected: number }> = []
+
+  // Generate data for 12 months (past actual + future projected)
+  for (let i = -6; i <= 5; i++) {
+    const date = new Date(visaStartDate)
+    date.setMonth(date.getMonth() + i)
+
+    const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    const monthsSinceStart = i
+    const isPast = date <= today
+
+    // Calculate cumulative returns
+    const cumulativeReturns = monthlyRent * Math.max(0, monthsSinceStart + 1)
+
+    data.push({
+      month: monthName,
+      returns: isPast ? cumulativeReturns : 0,
+      projected: cumulativeReturns
+    })
+  }
+
+  return data
+}
+
+/**
+ * Get property performance metrics
+ */
+export async function getPropertyPerformance() {
+  const units = await getInvestorPropertyUnits()
+
+  return units.map(unit => {
+    // Calculate annual yield for this unit (assuming unit value is proportional)
+    const estimatedUnitValue = 100000 // This could be calculated based on property valuation
+    const annualRent = (unit.monthly_rent || 0) * 12
+    const yield_pct = estimatedUnitValue > 0 ? (annualRent / estimatedUnitValue) * 100 : 0
+
+    return {
+      property: `Unit ${unit.unit_number}`,
+      address: unit.property?.address || 'N/A',
+      rent: unit.monthly_rent || 0,
+      yield: yield_pct,
+      occupancy: unit.rental_status === 'rented' ? 100 : 0,
+      status: unit.rental_status
+    }
+  })
+}
