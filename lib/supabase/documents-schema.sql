@@ -33,18 +33,33 @@ CREATE TABLE IF NOT EXISTS documents (
   requirement_type VARCHAR(100), -- 'passport', 'proof_of_investment', 'criminal_record', etc.
 
   -- Soft delete
-  deleted_at TIMESTAMP WITH TIME ZONE,
-
-  CONSTRAINT documents_investor_fund_fk FOREIGN KEY (investor_id, fund_id)
-    REFERENCES investors(id, fund_id)
+  deleted_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Add composite foreign key constraint separately (after table creation)
+-- Note: This requires that investors table has a composite unique constraint on (id, fund_id)
+-- If not, comment out this constraint or modify based on your actual schema
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'documents_investor_fund_fk'
+  ) THEN
+    ALTER TABLE documents
+    ADD CONSTRAINT documents_investor_fund_fk
+    FOREIGN KEY (investor_id, fund_id) REFERENCES investors(id, fund_id);
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE 'Could not add composite FK constraint. This is OK if investors table does not have composite key.';
+END $$;
+
 -- Indexes for better query performance
-CREATE INDEX idx_documents_investor_id ON documents(investor_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_documents_fund_id ON documents(fund_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_documents_category ON documents(category) WHERE deleted_at IS NULL;
-CREATE INDEX idx_documents_status ON documents(status) WHERE deleted_at IS NULL;
-CREATE INDEX idx_documents_uploaded_at ON documents(uploaded_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_documents_investor_id ON documents(investor_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_documents_fund_id ON documents(fund_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_documents_uploaded_at ON documents(uploaded_at DESC) WHERE deleted_at IS NULL;
 
 -- Updated_at trigger
 CREATE OR REPLACE FUNCTION update_documents_updated_at()
