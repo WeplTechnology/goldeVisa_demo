@@ -1,6 +1,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Helper para verificar si es admin
+function isAdminEmail(email: string | undefined): boolean {
+  if (!email) return false
+  return email.endsWith('@stagfund.com') || email.endsWith('@goldenvisa.com')
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -95,9 +101,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Verificar que usuarios admin tengan email @stagfund.com
+  // Verificar que usuarios admin tengan email de dominio autorizado
   if (request.nextUrl.pathname.startsWith('/admin') && user) {
-    if (request.nextUrl.pathname !== '/admin/login' && !user.email?.endsWith('@stagfund.com')) {
+    if (request.nextUrl.pathname !== '/admin/login' && !isAdminEmail(user.email)) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }

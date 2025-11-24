@@ -2,60 +2,258 @@
 @tailwind components;
 @tailwind utilities;
 
+/* === STAG PREMIUM COLOR SYSTEM === */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Primary Brand Colors */
+    --stag-navy: 213 54% 24%;
+    --stag-navy-rgb: 27, 54, 93;
+    --stag-blue: 212 50% 62%;
+    --stag-blue-rgb: 107, 155, 209;
+    --stag-light: 212 60% 95%;
+    --stag-gold: 43 89% 45%;
+
+    /* Semantic Colors */
+    --background: 210 20% 98%;
+    --foreground: 213 54% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 213 54% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --popover-foreground: 213 54% 15%;
+    --primary: 213 54% 24%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 212 60% 95%;
+    --secondary-foreground: 213 54% 24%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 212 50% 62%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 212 50% 62%;
+    --radius: 0.75rem;
+
+    /* Premium Shadows */
+    --shadow-sm: 0 1px 3px rgba(27, 54, 93, 0.06), 0 1px 2px rgba(27, 54, 93, 0.04);
+    --shadow-md: 0 4px 12px rgba(27, 54, 93, 0.08), 0 2px 6px rgba(27, 54, 93, 0.04);
+    --shadow-lg: 0 10px 30px rgba(27, 54, 93, 0.12), 0 4px 12px rgba(27, 54, 93, 0.06);
+    --shadow-xl: 0 20px 50px rgba(27, 54, 93, 0.15), 0 8px 20px rgba(27, 54, 93, 0.08);
+    --shadow-glow: 0 0 20px rgba(107, 155, 209, 0.3);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 213 54% 8%;
+    --foreground: 210 20% 98%;
+    --card: 213 54% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 213 54% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 212 50% 62%;
+    --primary-foreground: 213 54% 8%;
+    --secondary: 213 54% 20%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 213 54% 20%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 212 50% 62%;
+    --accent-foreground: 213 54% 8%;
+    --border: 213 54% 20%;
+    --input: 213 54% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
+/* === PREMIUM CARD STYLES === */
+.card-premium {
+  background-color: white;
+  border-radius: 1rem;
+  border: 1px solid #f3f4f6;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(27, 54, 93, 0.06), 0 1px 2px rgba(27, 54, 93, 0.04);
+}
+
+.card-premium:hover {
+  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.08), 0 2px 6px rgba(27, 54, 93, 0.04);
+  transform: translateY(-2px);
+}
+
+/* Icon containers */
+.icon-container-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  padding: 0.625rem;
+  background: linear-gradient(135deg, #6B9BD1 0%, #5a8ac4 100%);
+  box-shadow: 0 4px 12px rgba(107, 155, 209, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.icon-container-primary:hover {
+  transform: scale(1.05);
+}
+
+/* Progress bar premium */
+.progress-premium {
+  height: 0.75rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: linear-gradient(90deg, #E8F0F9 0%, #f3f4f6 100%);
+}
+
+.progress-premium-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: all 1s ease-out;
+  background: linear-gradient(90deg, #6B9BD1 0%, #1B365D 100%);
+  box-shadow: 0 2px 8px rgba(107, 155, 209, 0.4);
+}
+
+/* Activity items */
+.activity-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.activity-item:hover {
+  background-color: rgba(232, 240, 249, 0.5);
+}
+
+/* Glass effect */
+.glass-effect {
+  backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* === KEYFRAME ANIMATIONS === */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
   }
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
   }
+}
+
+@keyframes slideInLeft {
+  from { 
+    opacity: 0; 
+    transform: translateX(-20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(107, 155, 209, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(107, 155, 209, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(107, 155, 209, 0);
+  }
+}
+
+/* === SCROLLBAR STYLING === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #E8F0F9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(107, 155, 209, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 155, 209, 0.5);
+}
+
+/* === ANIMATION UTILITIES === */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* Stat numbers with tabular figures */
+.stat-number {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Font numeric */
+.font-numeric {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
 }

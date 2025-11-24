@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { isAdminEmail } from '@/lib/utils/auth-helpers'
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 
@@ -36,7 +37,7 @@ export function useAuth() {
   }
 
   const isAdmin = () => {
-    return user?.email?.endsWith('@stagfund.com') ?? false
+    return isAdminEmail(user?.email)
   }
 
   return {
