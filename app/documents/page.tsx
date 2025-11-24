@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +25,15 @@ import {
   FileSpreadsheet
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import {
+  getInvestorDocuments,
+  getDocumentStats,
+  getRequiredDocumentsChecklist,
+  deleteDocument,
+  getDocumentDownloadUrl,
+  type DocumentData
+} from '@/lib/actions/document-actions'
+import { formatFileSize, getFileTypeLabel } from '@/lib/utils/file-utils'
 
 interface Document {
   id: string
@@ -39,77 +48,66 @@ interface Document {
   notes?: string
 }
 
-const mockDocuments: Document[] = [
-  {
-    id: '1',
-    name: 'Passport - Zhang Wei',
-    category: 'identity',
-    status: 'approved',
-    uploadDate: 'Nov 15, 2024',
-    size: '2.4 MB',
-    type: 'PDF',
-    verifiedBy: 'admin@stagfund.com',
-    verifiedDate: 'Nov 16, 2024'
-  },
-  {
-    id: '2',
-    name: 'Bank Statement Q4 2024',
-    category: 'financial',
-    status: 'approved',
-    uploadDate: 'Nov 15, 2024',
-    size: '1.8 MB',
-    type: 'PDF',
-    verifiedBy: 'admin@stagfund.com',
-    verifiedDate: 'Nov 17, 2024'
-  },
-  {
-    id: '3',
-    name: 'Investment Certificate',
-    category: 'financial',
-    status: 'approved',
-    uploadDate: 'Nov 15, 2024',
-    size: '0.9 MB',
-    type: 'PDF',
-    verifiedBy: 'admin@stagfund.com',
-    verifiedDate: 'Nov 16, 2024'
-  },
-  {
-    id: '4',
-    name: 'Property Title - Unit 4B',
-    category: 'property',
-    status: 'approved',
-    uploadDate: 'Dec 1, 2024',
-    size: '3.2 MB',
-    type: 'PDF',
-    verifiedBy: 'admin@stagfund.com',
-    verifiedDate: 'Dec 2, 2024'
-  },
-  {
-    id: '5',
-    name: 'Utility Bill - December',
-    category: 'other',
-    status: 'pending',
-    uploadDate: 'Dec 5, 2024',
-    size: '0.4 MB',
-    type: 'PDF'
-  },
-  {
-    id: '6',
-    name: 'Proof of Residence',
-    category: 'legal',
-    status: 'pending',
-    uploadDate: 'Dec 5, 2024',
-    size: '1.1 MB',
-    type: 'PDF'
-  }
-]
-
 export default function DocumentsPage() {
   const { user, loading } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [documents] = useState<Document[]>(mockDocuments)
+  const [documents, setDocuments] = useState<Document[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [dataLoading, setDataLoading] = useState(true)
+  const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, rejected: 0 })
+  const [checklist, setChecklist] = useState<any[]>([])
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Load documents data
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      try {
+        setDataLoading(true)
+        const [docsData, statsData, checklistData] = await Promise.all([
+          getInvestorDocuments(),
+          getDocumentStats(),
+          getRequiredDocumentsChecklist()
+        ])
+
+        // Transform DocumentData to Document format
+        const transformedDocs: Document[] = docsData.map(doc => ({
+          id: doc.id,
+          name: doc.name,
+          category: doc.category,
+          status: doc.status,
+          uploadDate: new Date(doc.uploaded_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }),
+          size: formatFileSize(doc.file_size),
+          type: getFileTypeLabel(doc.file_type),
+          verifiedBy: doc.verified_by || undefined,
+          verifiedDate: doc.verified_at
+            ? new Date(doc.verified_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })
+            : undefined,
+          notes: doc.verification_notes || undefined
+        }))
+
+        setDocuments(transformedDocs)
+        setStats(statsData)
+        setChecklist(checklistData)
+      } catch (error) {
+        console.error('Error loading documents:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
 
   if (loading) {
     return (
@@ -125,13 +123,6 @@ export default function DocumentsPage() {
     return matchesSearch && matchesCategory
   })
 
-  const stats = {
-    total: documents.length,
-    approved: documents.filter(d => d.status === 'approved').length,
-    pending: documents.filter(d => d.status === 'pending').length,
-    rejected: documents.filter(d => d.status === 'rejected').length
-  }
-
   const handleUpload = () => {
     setIsUploading(true)
     // Simular upload
@@ -139,6 +130,71 @@ export default function DocumentsPage() {
       setIsUploading(false)
       alert('Upload functionality will be implemented with Supabase Storage')
     }, 1000)
+  }
+
+  const handleDownload = async (documentId: string) => {
+    try {
+      const result = await getDocumentDownloadUrl(documentId)
+      if (result.success && result.url) {
+        // Open download URL in new tab
+        window.open(result.url, '_blank')
+      } else {
+        alert(result.error || 'Failed to download document')
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      alert('Failed to download document')
+    }
+  }
+
+  const handleDelete = async (documentId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) {
+      return
+    }
+
+    try {
+      setDeletingId(documentId)
+      const result = await deleteDocument(documentId)
+
+      if (result.success) {
+        // Reload documents
+        const docsData = await getInvestorDocuments()
+        const transformedDocs: Document[] = docsData.map(doc => ({
+          id: doc.id,
+          name: doc.name,
+          category: doc.category,
+          status: doc.status,
+          uploadDate: new Date(doc.uploaded_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }),
+          size: formatFileSize(doc.file_size),
+          type: getFileTypeLabel(doc.file_type),
+          verifiedBy: doc.verified_by || undefined,
+          verifiedDate: doc.verified_at
+            ? new Date(doc.verified_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })
+            : undefined,
+          notes: doc.verification_notes || undefined
+        }))
+        setDocuments(transformedDocs)
+
+        // Reload stats
+        const statsData = await getDocumentStats()
+        setStats(statsData)
+      } else {
+        alert(result.error || 'Failed to delete document')
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error)
+      alert('Failed to delete document')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -153,7 +209,9 @@ export default function DocumentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Documents</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">{stats.total}</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? <Loader2 className="h-6 w-6 animate-spin text-stag-blue" /> : stats.total}
+                </p>
               </div>
               <div className="icon-container-primary">
                 <FileText className="w-6 h-6 text-white" />
@@ -167,7 +225,9 @@ export default function DocumentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.approved}</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {dataLoading ? <Loader2 className="h-6 w-6 animate-spin text-emerald-600" /> : stats.approved}
+                </p>
               </div>
               <div className="icon-container-success">
                 <CheckCircle2 className="w-6 h-6 text-white" />
@@ -181,7 +241,9 @@ export default function DocumentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">
+                  {dataLoading ? <Loader2 className="h-6 w-6 animate-spin text-amber-600" /> : stats.pending}
+                </p>
               </div>
               <div className="icon-container-warning">
                 <Clock className="w-6 h-6 text-white" />
@@ -195,7 +257,9 @@ export default function DocumentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Rejected</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">
+                  {dataLoading ? <Loader2 className="h-6 w-6 animate-spin text-red-600" /> : stats.rejected}
+                </p>
               </div>
               <div className="icon-container-default bg-red-100">
                 <AlertCircle className="w-6 h-6 text-red-600" />
@@ -281,21 +345,54 @@ export default function DocumentsPage() {
           </CardHeader>
 
           <CardContent className="pt-6">
-            <TabsContent value="all" className="mt-0">
-              <DocumentsList documents={filteredDocuments} />
-            </TabsContent>
-            <TabsContent value="identity" className="mt-0">
-              <DocumentsList documents={filteredDocuments} />
-            </TabsContent>
-            <TabsContent value="financial" className="mt-0">
-              <DocumentsList documents={filteredDocuments} />
-            </TabsContent>
-            <TabsContent value="property" className="mt-0">
-              <DocumentsList documents={filteredDocuments} />
-            </TabsContent>
-            <TabsContent value="legal" className="mt-0">
-              <DocumentsList documents={filteredDocuments} />
-            </TabsContent>
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-stag-blue" />
+              </div>
+            ) : (
+              <>
+                <TabsContent value="all" className="mt-0">
+                  <DocumentsList
+                    documents={filteredDocuments}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    deletingId={deletingId}
+                  />
+                </TabsContent>
+                <TabsContent value="identity" className="mt-0">
+                  <DocumentsList
+                    documents={filteredDocuments}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    deletingId={deletingId}
+                  />
+                </TabsContent>
+                <TabsContent value="financial" className="mt-0">
+                  <DocumentsList
+                    documents={filteredDocuments}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    deletingId={deletingId}
+                  />
+                </TabsContent>
+                <TabsContent value="property" className="mt-0">
+                  <DocumentsList
+                    documents={filteredDocuments}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    deletingId={deletingId}
+                  />
+                </TabsContent>
+                <TabsContent value="legal" className="mt-0">
+                  <DocumentsList
+                    documents={filteredDocuments}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    deletingId={deletingId}
+                  />
+                </TabsContent>
+              </>
+            )}
           </CardContent>
         </Tabs>
       </Card>
@@ -312,14 +409,17 @@ export default function DocumentsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <ChecklistItem title="Valid Passport" status="completed" />
-            <ChecklistItem title="Proof of Investment (€250,000)" status="completed" />
-            <ChecklistItem title="Criminal Record Certificate" status="completed" />
-            <ChecklistItem title="Property Title Documents" status="completed" />
-            <ChecklistItem title="Proof of Residence" status="pending" />
-            <ChecklistItem title="Utility Bill (Recent)" status="pending" />
-            <ChecklistItem title="Health Insurance Certificate" status="missing" />
-            <ChecklistItem title="Birth Certificate" status="missing" />
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-stag-blue" />
+              </div>
+            ) : checklist.length > 0 ? (
+              checklist.map((item, index) => (
+                <ChecklistItem key={index} title={item.title} status={item.status} />
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No checklist items found</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -328,7 +428,14 @@ export default function DocumentsPage() {
 }
 
 // Helper Components
-function DocumentsList({ documents }: { documents: Document[] }) {
+interface DocumentsListProps {
+  documents: Document[]
+  onDownload: (id: string) => void
+  onDelete: (id: string) => void
+  deletingId: string | null
+}
+
+function DocumentsList({ documents, onDownload, onDelete, deletingId }: DocumentsListProps) {
   if (documents.length === 0) {
     return (
       <div className="text-center py-12">
@@ -341,13 +448,26 @@ function DocumentsList({ documents }: { documents: Document[] }) {
   return (
     <div className="space-y-3">
       {documents.map((doc) => (
-        <DocumentItem key={doc.id} document={doc} />
+        <DocumentItem
+          key={doc.id}
+          document={doc}
+          onDownload={onDownload}
+          onDelete={onDelete}
+          deletingId={deletingId}
+        />
       ))}
     </div>
   )
 }
 
-function DocumentItem({ document }: { document: Document }) {
+interface DocumentItemProps {
+  document: Document
+  onDownload: (id: string) => void
+  onDelete: (id: string) => void
+  deletingId: string | null
+}
+
+function DocumentItem({ document, onDownload, onDelete, deletingId }: DocumentItemProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -420,14 +540,37 @@ function DocumentItem({ document }: { document: Document }) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 hover:bg-stag-light"
+            onClick={() => onDownload(document.id)}
+            title="Preview"
+          >
             <Eye className="w-4 h-4 text-gray-400" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 hover:bg-stag-light"
+            onClick={() => onDownload(document.id)}
+            title="Download"
+          >
             <Download className="w-4 h-4 text-gray-400" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-            <Trash2 className="w-4 h-4 text-gray-400" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 hover:bg-red-50"
+            onClick={() => onDelete(document.id)}
+            disabled={deletingId === document.id}
+            title="Delete"
+          >
+            {deletingId === document.id ? (
+              <Loader2 className="w-4 h-4 text-red-400 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+            )}
           </Button>
         </div>
       </div>

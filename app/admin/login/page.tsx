@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, Loader2, Lock, Users, BarChart3 } from 'lucide-react'
-import Image from 'next/image'
+import { AlertCircle, Shield, Loader2, Lock, Users, BarChart3 } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -78,14 +77,14 @@ export default function AdminLoginPage() {
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           {/* Logo */}
-          <div className="relative w-[280px] h-[56px]">
-            <Image
-              src="/images/stag-logo.svg"
-              alt="STAG Admin Portal"
-              fill
-              className="object-contain object-left"
-              priority
-            />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-stag-blue to-stag-blue-light flex items-center justify-center shadow-lg">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-xl tracking-tight">STAG</h1>
+              <p className="text-xs text-white/60 font-medium tracking-wide">ADMIN PORTAL</p>
+            </div>
           </div>
           
           {/* Main content */}
@@ -134,15 +133,13 @@ export default function AdminLoginPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex justify-center mb-8 lg:hidden">
-            <div className="relative w-[200px] h-[40px]">
-              <Image
-                src="/images/stag-logo.svg"
-                alt="STAG Admin Portal"
-                fill
-                className="object-contain"
-                priority
-              />
+          <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-stag-blue to-stag-blue-light flex items-center justify-center shadow-lg">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-xl text-white tracking-tight">STAG</h1>
+              <p className="text-xs text-gray-400 font-medium tracking-wide">ADMIN PORTAL</p>
             </div>
           </div>
 

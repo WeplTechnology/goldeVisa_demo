@@ -1,0 +1,21 @@
+<svg width="200" height="300" viewBox="0 0 200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Antlers Left -->
+  <path d="M100 80 L80 50 L75 55 L78 45 L72 38 L70 50 L65 40 L62 52 L58 45 L60 58 L55 54 L58 65 L65 62 L72 75 L78 72 L85 88 L92 85 L100 105"
+        stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Antlers Right -->
+  <path d="M100 80 L120 50 L125 55 L122 45 L128 38 L130 50 L135 40 L138 52 L142 45 L140 58 L145 54 L142 65 L135 62 L128 75 L122 72 L115 88 L108 85 L100 105"
+        stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Head -->
+  <ellipse cx="100" cy="140" rx="28" ry="40" fill="black"/>
+
+  <!-- Snout -->
+  <path d="M100 160 L92 175 L100 180 L108 175 Z" fill="black"/>
+
+  <!-- Neck -->
+  <path d="M85 175 L82 200 L100 210 L118 200 L115 175" fill="black"/>
+
+  <!-- Circle Base -->
+  <circle cx="100" cy="200" r="90" stroke="black" stroke-width="6" fill="none"/>
+</svg>
