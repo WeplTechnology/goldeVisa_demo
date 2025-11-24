@@ -190,7 +190,7 @@ export default function PropertiesPage() {
                     bedrooms={unit.bedrooms}
                     bathrooms={unit.bathrooms}
                     monthlyRent={unit.monthly_rent}
-                    status={unit.rental_status}
+                    status={unit.rental_status as 'rented' | 'available' | 'maintenance'}
                     tenant={unit.current_tenant_name ? {
                       name: unit.current_tenant_name,
                       email: unit.current_tenant_email || '',
