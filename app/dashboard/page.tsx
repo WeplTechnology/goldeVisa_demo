@@ -7,11 +7,11 @@ import { StatCard } from '@/components/ui/stat-card'
 import { GoldenVisaTimeline } from '@/components/ui/golden-visa-timeline'
 import { InvestmentPieChart } from '@/components/ui/charts/investment-pie'
 import { ReturnsChart } from '@/components/ui/charts/returns-chart'
-import { 
-  Loader2, 
-  TrendingUp, 
-  Building2, 
-  CheckCircle, 
+import {
+  Loader2,
+  TrendingUp,
+  Building2,
+  CheckCircle,
   Clock,
   FileText,
   Bell,
@@ -19,13 +19,27 @@ import {
   Calendar,
   MapPin
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import {
+  getInvestorData,
+  getInvestorPropertyUnits,
+  getPortfolioSummary,
+  getGoldenVisaMilestones,
+  type PropertyUnit,
+  type GoldenVisaMilestone
+} from '@/lib/actions/investor-actions'
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
+
+  // Data states
+  const [portfolioData, setPortfolioData] = useState<any>(null)
+  const [propertyUnits, setPropertyUnits] = useState<PropertyUnit[]>([])
+  const [milestones, setMilestones] = useState<GoldenVisaMilestone[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -35,6 +49,32 @@ export default function DashboardPage() {
     }, 3000)
     return () => clearTimeout(timeout)
   }, [loading, router])
+
+  // Load investor data
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      try {
+        setDataLoading(true)
+        const [portfolio, units, milestonesData] = await Promise.all([
+          getPortfolioSummary(),
+          getInvestorPropertyUnits(),
+          getGoldenVisaMilestones()
+        ])
+
+        setPortfolioData(portfolio)
+        setPropertyUnits(units)
+        setMilestones(milestonesData)
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
 
   if (loading) {
     return (
@@ -68,39 +108,42 @@ export default function DashboardPage() {
         <div className="animate-fade-in-up stagger-1">
           <StatCard
             title="Total Investment"
-            value="€250,000"
+            value={dataLoading ? '...' : `€${portfolioData?.totalInvestment?.toLocaleString() || '0'}`}
             subtitle="Fully invested"
             icon={TrendingUp}
             variant="primary"
-            trend={{ value: '4.2% ROI', positive: true }}
+            trend={portfolioData?.annualYield ? {
+              value: `${portfolioData.annualYield.toFixed(1)}% ROI`,
+              positive: true
+            } : undefined}
           />
         </div>
-        
+
         <div className="animate-fade-in-up stagger-2">
           <StatCard
             title="Properties"
-            value="2"
-            subtitle="Units in Milano"
+            value={dataLoading ? '...' : String(portfolioData?.propertiesCount || 0)}
+            subtitle={propertyUnits.length > 0 ? `Units in ${propertyUnits[0].property?.city || 'Milano'}` : 'Units'}
             icon={Building2}
             variant="default"
           />
         </div>
-        
+
         <div className="animate-fade-in-up stagger-3">
           <StatCard
             title="Visa Status"
-            value="Active"
-            subtitle="Year 1 of 5"
+            value={dataLoading ? '...' : (portfolioData?.visaStatus === 'in_progress' ? 'Active' : portfolioData?.visaStatus || 'Unknown')}
+            subtitle={portfolioData?.monthsSinceStart ? `Year ${Math.floor(portfolioData.monthsSinceStart / 12) + 1} of 5` : 'Year 1 of 5'}
             icon={CheckCircle}
             variant="success"
           />
         </div>
-        
+
         <div className="animate-fade-in-up stagger-4">
           <StatCard
-            title="Next Milestone"
-            value="15 days"
-            subtitle="Document review"
+            title="Monthly Income"
+            value={dataLoading ? '...' : `€${portfolioData?.monthlyRent?.toLocaleString() || '0'}`}
+            subtitle="Rental income"
             icon={Clock}
             variant="warning"
           />
@@ -127,7 +170,12 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <InvestmentPieChart />
+            <InvestmentPieChart
+              data={{
+                realEstateAmount: portfolioData?.realEstateAmount,
+                rdAmount: portfolioData?.rdAmount
+              }}
+            />
           </CardContent>
         </Card>
 
@@ -185,7 +233,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <GoldenVisaTimeline />
+            <GoldenVisaTimeline milestones={milestones} />
           </CardContent>
         </Card>
 
@@ -207,63 +255,55 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Property 1 */}
-              <div className="p-3 rounded-xl bg-gradient-to-r from-stag-light/50 to-transparent border border-gray-100 hover:border-stag-blue/30 transition-colors cursor-pointer group">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-stag-light flex items-center justify-center group-hover:bg-stag-blue/20 transition-colors">
-                      <Building2 className="w-5 h-5 text-stag-blue" />
+              {dataLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-stag-blue" />
+                </div>
+              ) : propertyUnits.length > 0 ? (
+                <>
+                  {propertyUnits.map((unit) => (
+                    <div key={unit.id} className="p-3 rounded-xl bg-gradient-to-r from-stag-light/50 to-transparent border border-gray-100 hover:border-stag-blue/30 transition-colors cursor-pointer group">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-stag-light flex items-center justify-center group-hover:bg-stag-blue/20 transition-colors">
+                            <Building2 className="w-5 h-5 text-stag-blue" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-stag-navy text-sm">Unit {unit.unit_number}</p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                              <MapPin className="w-3 h-3" />
+                              {unit.property?.address || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 text-[10px] font-semibold rounded-full ${
+                          unit.rental_status === 'rented'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {unit.rental_status?.toUpperCase() || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Monthly rent</span>
+                        <span className="font-bold text-stag-navy">€{unit.monthly_rent?.toLocaleString() || '0'}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-stag-navy text-sm">Unit 4B</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3" />
-                        Via Garibaldi 23, Milano
-                      </p>
+                  ))}
+
+                  {/* Total */}
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-stag-navy to-stag-navy-light text-white">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/80 text-sm">Total monthly income</span>
+                      <span className="font-bold text-xl">€{portfolioData?.monthlyRent?.toLocaleString() || '0'}</span>
                     </div>
                   </div>
-                  <span className="px-2 py-1 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">
-                    RENTED
-                  </span>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500">No properties assigned yet</p>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Monthly rent</span>
-                  <span className="font-bold text-stag-navy">€850</span>
-                </div>
-              </div>
-
-              {/* Property 2 */}
-              <div className="p-3 rounded-xl bg-gradient-to-r from-stag-light/50 to-transparent border border-gray-100 hover:border-stag-blue/30 transition-colors cursor-pointer group">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-stag-light flex items-center justify-center group-hover:bg-stag-blue/20 transition-colors">
-                      <Building2 className="w-5 h-5 text-stag-blue" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-stag-navy text-sm">Unit 4C</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3" />
-                        Via Garibaldi 23, Milano
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-1 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">
-                    RENTED
-                  </span>
-                </div>
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Monthly rent</span>
-                  <span className="font-bold text-stag-navy">€870</span>
-                </div>
-              </div>
-
-              {/* Total */}
-              <div className="p-3 rounded-xl bg-gradient-to-r from-stag-navy to-stag-navy-light text-white">
-                <div className="flex items-center justify-between">
-                  <span className="text-white/80 text-sm">Total monthly income</span>
-                  <span className="font-bold text-xl">€1,720</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

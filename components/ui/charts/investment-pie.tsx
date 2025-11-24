@@ -2,12 +2,16 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
-const data = [
-  { name: 'Real Estate', value: 212500, percentage: 85 },
-  { name: 'R&D Investment', value: 37500, percentage: 15 },
-]
-
 const COLORS = ['#1B365D', '#6B9BD1']
+
+interface InvestmentData {
+  realEstateAmount?: number
+  rdAmount?: number
+}
+
+interface InvestmentPieChartProps {
+  data?: InvestmentData
+}
 
 interface CustomTooltipProps {
   active?: boolean
@@ -37,15 +41,31 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   return null
 }
 
-export function InvestmentPieChart() {
-  const total = data.reduce((sum, item) => sum + item.value, 0)
+export function InvestmentPieChart({ data: investmentData }: InvestmentPieChartProps) {
+  // Default values if no data provided
+  const realEstateAmount = investmentData?.realEstateAmount || 212500
+  const rdAmount = investmentData?.rdAmount || 37500
+  const total = realEstateAmount + rdAmount
+
+  const chartData = [
+    {
+      name: 'Real Estate',
+      value: realEstateAmount,
+      percentage: Math.round((realEstateAmount / total) * 100)
+    },
+    {
+      name: 'R&D Investment',
+      value: rdAmount,
+      percentage: Math.round((rdAmount / total) * 100)
+    },
+  ]
 
   return (
     <div className="relative w-full h-[280px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={data}
+            data={chartData}
             cx="50%"
             cy="50%"
             innerRadius={70}
@@ -54,9 +74,9 @@ export function InvestmentPieChart() {
             dataKey="value"
             stroke="none"
           >
-            {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}
                 className="transition-all duration-300 hover:opacity-80"
               />
@@ -76,9 +96,9 @@ export function InvestmentPieChart() {
 
       {/* Legend */}
       <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-6">
-        {data.map((item, index) => (
+        {chartData.map((item, index) => (
           <div key={item.name} className="flex items-center gap-2">
-            <div 
+            <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: COLORS[index] }}
             />

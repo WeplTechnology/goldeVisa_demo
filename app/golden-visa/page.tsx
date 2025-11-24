@@ -21,9 +21,43 @@ import {
   Phone
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useEffect, useState } from 'react'
+import {
+  getInvestorData,
+  getGoldenVisaMilestones,
+  type InvestorData,
+  type GoldenVisaMilestone
+} from '@/lib/actions/investor-actions'
 
 export default function GoldenVisaPage() {
   const { user, loading } = useAuth()
+  const [investorData, setInvestorData] = useState<InvestorData | null>(null)
+  const [milestones, setMilestones] = useState<GoldenVisaMilestone[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
+
+  // Load investor data
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      try {
+        setDataLoading(true)
+        const [investor, milestonesData] = await Promise.all([
+          getInvestorData(),
+          getGoldenVisaMilestones()
+        ])
+
+        setInvestorData(investor)
+        setMilestones(milestonesData)
+      } catch (error) {
+        console.error('Error loading golden visa data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
 
   if (loading) {
     return (
@@ -32,6 +66,32 @@ export default function GoldenVisaPage() {
       </div>
     )
   }
+
+  // Calculate derived data
+  const visaStatusDisplay = investorData?.golden_visa_status === 'in_progress' ? 'Active' :
+    investorData?.golden_visa_status === 'pending' ? 'Pending' :
+    investorData?.golden_visa_status || 'Unknown'
+
+  const visaStartDate = investorData?.visa_start_date ? new Date(investorData.visa_start_date) : null
+  const visaExpectedCompletion = investorData?.visa_expected_completion ? new Date(investorData.visa_expected_completion) : null
+
+  const yearsIntoProgram = visaStartDate
+    ? Math.floor((Date.now() - visaStartDate.getTime()) / (1000 * 60 * 60 * 24 * 365)) + 1
+    : 1
+
+  const completionDate = visaExpectedCompletion
+    ? visaExpectedCompletion.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : 'TBD'
+
+  const yearsRemaining = visaExpectedCompletion
+    ? Math.max(0, Math.ceil((visaExpectedCompletion.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365)))
+    : 5
+
+  // Find next milestone
+  const nextMilestone = milestones.find(m => m.status === 'in_progress' || m.status === 'pending')
+  const daysToNextMilestone = nextMilestone?.due_date
+    ? Math.max(0, Math.ceil((new Date(nextMilestone.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null
 
   return (
     <DashboardLayout
@@ -45,10 +105,12 @@ export default function GoldenVisaPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Visa Status</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">Active</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : visaStatusDisplay}
+                </p>
                 <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  Year 1 of 5
+                  Year {yearsIntoProgram} of 5
                 </p>
               </div>
               <div className="icon-container-success">
@@ -63,10 +125,12 @@ export default function GoldenVisaPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Expected Completion</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">Nov 2029</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : completionDate}
+                </p>
                 <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  ~5 years remaining
+                  ~{yearsRemaining} years remaining
                 </p>
               </div>
               <div className="icon-container-primary">
@@ -81,10 +145,12 @@ export default function GoldenVisaPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Next Milestone</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">15 days</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : daysToNextMilestone !== null ? `${daysToNextMilestone} days` : 'N/A'}
+                </p>
                 <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  Document review
+                  {nextMilestone?.title || 'Document review'}
                 </p>
               </div>
               <div className="icon-container-warning">
@@ -116,7 +182,7 @@ export default function GoldenVisaPage() {
             </p>
           </CardHeader>
           <CardContent className="pt-6">
-            <GoldenVisaTimeline />
+            <GoldenVisaTimeline milestones={milestones} />
           </CardContent>
         </Card>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Check, Circle, Clock, FileText, Building2, Plane, Award } from 'lucide-react'
+import { Check, Circle, Clock, FileText, Building2, Plane, Award, TrendingUp, Home, Calendar } from 'lucide-react'
 
 interface Milestone {
   id: string
@@ -12,7 +12,53 @@ interface Milestone {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const milestones: Milestone[] = [
+interface GoldenVisaMilestoneData {
+  id: string
+  milestone_type: string
+  title: string
+  description: string
+  status: string
+  due_date: string | null
+  completed_date: string | null
+  order_number: number
+}
+
+interface GoldenVisaTimelineProps {
+  milestones?: GoldenVisaMilestoneData[]
+}
+
+// Map milestone types to icons
+const getIconForType = (type: string) => {
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    investment: TrendingUp,
+    company_incorporation: FileText,
+    property_assignment: Building2,
+    rental_year_1: Home,
+    rental_year_2: Home,
+    rental_year_3: Home,
+    rental_year_4: Home,
+    rental_year_5: Home,
+    residency_application: Plane,
+    citizenship: Award,
+  }
+  return iconMap[type] || Clock
+}
+
+// Format date to readable format
+const formatDate = (dateString: string | null): string | undefined => {
+  if (!dateString) return undefined
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// Determine milestone status
+const getMilestoneStatus = (status: string): 'completed' | 'current' | 'pending' => {
+  if (status === 'completed') return 'completed'
+  if (status === 'in_progress') return 'current'
+  return 'pending'
+}
+
+const defaultMilestones: Milestone[] = [
   {
     id: '1',
     title: 'Investment Completed',
@@ -60,9 +106,21 @@ const milestones: Milestone[] = [
   },
 ]
 
-export function GoldenVisaTimeline() {
+export function GoldenVisaTimeline({ milestones: data }: GoldenVisaTimelineProps) {
+  // Convert database milestones to component format
+  const milestones: Milestone[] = data && data.length > 0
+    ? data.map(m => ({
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        status: getMilestoneStatus(m.status),
+        date: formatDate(m.completed_date || m.due_date),
+        icon: getIconForType(m.milestone_type)
+      }))
+    : defaultMilestones
+
   const completedCount = milestones.filter(m => m.status === 'completed').length
-  const progress = (completedCount / milestones.length) * 100
+  const progress = milestones.length > 0 ? (completedCount / milestones.length) * 100 : 0
 
   return (
     <div className="space-y-6">

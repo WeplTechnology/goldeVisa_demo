@@ -24,9 +24,42 @@ import {
   Download,
   Image as ImageIcon
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  getInvestorPropertyUnits,
+  getPortfolioSummary,
+  type PropertyUnit
+} from '@/lib/actions/investor-actions'
 
 export default function PropertiesPage() {
   const { user, loading } = useAuth()
+  const [propertyUnits, setPropertyUnits] = useState<PropertyUnit[]>([])
+  const [portfolioData, setPortfolioData] = useState<any>(null)
+  const [dataLoading, setDataLoading] = useState(true)
+
+  // Load property data
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      try {
+        setDataLoading(true)
+        const [units, portfolio] = await Promise.all([
+          getInvestorPropertyUnits(),
+          getPortfolioSummary()
+        ])
+
+        setPropertyUnits(units)
+        setPortfolioData(portfolio)
+      } catch (error) {
+        console.error('Error loading properties data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
 
   if (loading) {
     return (
@@ -48,8 +81,12 @@ export default function PropertiesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Units</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">2</p>
-                <p className="text-xs text-gray-500 mt-1">45 m² total</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : propertyUnits.length}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {dataLoading ? '...' : `${propertyUnits.reduce((sum, u) => sum + (u.size_sqm || 0), 0)} m² total`}
+                </p>
               </div>
               <div className="icon-container-primary">
                 <Building2 className="w-6 h-6 text-white" />
@@ -63,10 +100,12 @@ export default function PropertiesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Monthly Income</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">€1,720</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : `€${portfolioData?.monthlyRent?.toLocaleString() || '0'}`}
+                </p>
                 <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
-                  Both rented
+                  {dataLoading ? '...' : `${propertyUnits.filter(u => u.rental_status === 'rented').length} rented`}
                 </p>
               </div>
               <div className="icon-container-success">
@@ -81,7 +120,9 @@ export default function PropertiesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Annual Yield</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">4.2%</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : `${portfolioData?.annualYield?.toFixed(1) || '0'}%`}
+                </p>
                 <p className="text-xs text-gray-500 mt-1">On investment</p>
               </div>
               <div className="icon-container-default">
@@ -96,8 +137,12 @@ export default function PropertiesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Occupancy</p>
-                <p className="text-2xl font-bold text-stag-navy mt-1">100%</p>
-                <p className="text-xs text-gray-500 mt-1">2 active leases</p>
+                <p className="text-2xl font-bold text-stag-navy mt-1">
+                  {dataLoading ? '...' : propertyUnits.length > 0 ? `${Math.round((propertyUnits.filter(u => u.rental_status === 'rented').length / propertyUnits.length) * 100)}%` : '0%'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {dataLoading ? '...' : `${propertyUnits.filter(u => u.rental_status === 'rented').length} active leases`}
+                </p>
               </div>
               <div className="icon-container-success">
                 <Users className="w-6 h-6 text-white" />
@@ -131,66 +176,66 @@ export default function PropertiesPage() {
           <CardContent className="pt-6">
             {/* Units Tab */}
             <TabsContent value="units" className="mt-0 space-y-6">
-              {/* Unit 4B */}
-              <PropertyUnitCard
-                unitNumber="4B"
-                floor={4}
-                size={22}
-                bedrooms={1}
-                bathrooms={1}
-                monthlyRent={850}
-                status="rented"
-                tenant={{
-                  name: "Marco Rossi",
-                  email: "marco.rossi@email.it",
-                  phone: "+39 345 678 9012",
-                  leaseStart: "Dec 20, 2024",
-                  leaseEnd: "Dec 19, 2025"
-                }}
-              />
-
-              {/* Unit 4C */}
-              <PropertyUnitCard
-                unitNumber="4C"
-                floor={4}
-                size={23}
-                bedrooms={1}
-                bathrooms={1}
-                monthlyRent={870}
-                status="rented"
-                tenant={{
-                  name: "Sofia Bianchi",
-                  email: "sofia.bianchi@email.it",
-                  phone: "+39 345 678 9013",
-                  leaseStart: "Dec 20, 2024",
-                  leaseEnd: "Dec 19, 2025"
-                }}
-              />
+              {dataLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-stag-blue" />
+                </div>
+              ) : propertyUnits.length > 0 ? (
+                propertyUnits.map((unit) => (
+                  <PropertyUnitCard
+                    key={unit.id}
+                    unitNumber={unit.unit_number}
+                    floor={unit.floor}
+                    size={unit.size_sqm}
+                    bedrooms={unit.bedrooms}
+                    bathrooms={unit.bathrooms}
+                    monthlyRent={unit.monthly_rent}
+                    status={unit.rental_status}
+                    tenant={unit.current_tenant_name ? {
+                      name: unit.current_tenant_name,
+                      email: unit.current_tenant_email || '',
+                      phone: '',
+                      leaseStart: unit.lease_start_date ? new Date(unit.lease_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+                      leaseEnd: unit.lease_end_date ? new Date(unit.lease_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+                    } : undefined}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No properties assigned yet</p>
+                </div>
+              )}
             </TabsContent>
 
             {/* Tenants Tab */}
             <TabsContent value="tenants" className="mt-0 space-y-4">
-              <TenantCard
-                name="Marco Rossi"
-                email="marco.rossi@email.it"
-                phone="+39 345 678 9012"
-                unit="4B"
-                monthlyRent={850}
-                leaseStart="Dec 20, 2024"
-                leaseEnd="Dec 19, 2025"
-                paymentStatus="paid"
-              />
-
-              <TenantCard
-                name="Sofia Bianchi"
-                email="sofia.bianchi@email.it"
-                phone="+39 345 678 9013"
-                unit="4C"
-                monthlyRent={870}
-                leaseStart="Dec 20, 2024"
-                leaseEnd="Dec 19, 2025"
-                paymentStatus="paid"
-              />
+              {dataLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-stag-blue" />
+                </div>
+              ) : propertyUnits.filter(u => u.current_tenant_name).length > 0 ? (
+                propertyUnits
+                  .filter(u => u.current_tenant_name)
+                  .map((unit) => (
+                    <TenantCard
+                      key={unit.id}
+                      name={unit.current_tenant_name || ''}
+                      email={unit.current_tenant_email || ''}
+                      phone=""
+                      unit={unit.unit_number}
+                      monthlyRent={unit.monthly_rent}
+                      leaseStart={unit.lease_start_date ? new Date(unit.lease_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                      leaseEnd={unit.lease_end_date ? new Date(unit.lease_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                      paymentStatus="paid"
+                    />
+                  ))
+              ) : (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No active tenants</p>
+                </div>
+              )}
             </TabsContent>
 
             {/* Documents Tab */}
