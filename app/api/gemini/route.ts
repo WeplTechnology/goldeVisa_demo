@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Usar el modelo Gemini Pro
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    // Usar el modelo Gemini 2.5 Flash (más reciente y rápido)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     // Construir el contexto de la conversación
     const context = `You are STAG AI Assistant, a helpful assistant for the STAG Fund Management Golden Visa platform.
@@ -65,10 +65,21 @@ Always be helpful and if you don't know something, recommend contacting their ac
     })
   } catch (error: any) {
     console.error('Gemini API error:', error)
+
+    // Extraer detalles del error de Gemini
+    let errorMessage = error.message || 'Failed to generate response'
+    let errorDetails = error.toString()
+
+    if (error.response) {
+      errorDetails = `API Response: ${JSON.stringify(error.response)}`
+    }
+
+    console.error('Full error details:', errorDetails)
+
     return NextResponse.json(
       {
-        error: 'Failed to generate response',
-        details: error.message
+        error: errorMessage,
+        details: errorDetails
       },
       { status: 500 }
     )
