@@ -1,22 +1,59 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { StatCard } from '@/components/ui/stat-card'
-import { 
-  Loader2, 
-  Users, 
-  Building2, 
-  FileCheck, 
+import {
+  Loader2,
+  Users,
+  Building2,
+  FileCheck,
   TrendingUp,
   ArrowUpRight,
   CheckCircle,
   Clock
 } from 'lucide-react'
+import { getAdminStats, getAllInvestors, getAllInvestments } from '@/lib/actions/admin-actions'
 
 export default function AdminDashboardPage() {
   const { user, loading } = useAuth()
+  const [dataLoading, setDataLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalInvestors: 0,
+    totalInvestments: 0,
+    totalCapital: 0,
+    activeVisaApplications: 0,
+    pendingDocuments: 0
+  })
+  const [recentInvestors, setRecentInvestors] = useState<any[]>([])
+  const [recentInvestments, setRecentInvestments] = useState<any[]>([])
+
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      try {
+        setDataLoading(true)
+        const [statsData, investorsData, investmentsData] = await Promise.all([
+          getAdminStats(),
+          getAllInvestors(),
+          getAllInvestments()
+        ])
+
+        setStats(statsData)
+        setRecentInvestors(investorsData.slice(0, 3))
+        setRecentInvestments(investmentsData.slice(0, 5))
+      } catch (error) {
+        console.error('Error loading admin data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
 
   if (loading) {
     return (
@@ -45,38 +82,37 @@ export default function AdminDashboardPage() {
         <div className="animate-fade-in-up stagger-1">
           <StatCard
             title="Total Investors"
-            value="1"
+            value={dataLoading ? '...' : stats.totalInvestors.toString()}
             subtitle="Active investors"
             icon={Users}
             variant="primary"
           />
         </div>
-        
+
         <div className="animate-fade-in-up stagger-2">
           <StatCard
-            title="Properties"
-            value="2"
-            subtitle="Total properties"
+            title="Investments"
+            value={dataLoading ? '...' : stats.totalInvestments.toString()}
+            subtitle="Total investments"
             icon={Building2}
             variant="default"
           />
         </div>
-        
+
         <div className="animate-fade-in-up stagger-3">
           <StatCard
             title="Capital Raised"
-            value="€1.75M"
-            subtitle="of €2M target"
+            value={dataLoading ? '...' : `€${(stats.totalCapital / 1000000).toFixed(2)}M`}
+            subtitle="Assets under management"
             icon={TrendingUp}
             variant="success"
-            trend={{ value: '87.5%', positive: true }}
           />
         </div>
-        
+
         <div className="animate-fade-in-up stagger-4">
           <StatCard
             title="Documents"
-            value="0"
+            value={dataLoading ? '...' : stats.pendingDocuments.toString()}
             subtitle="Pending verification"
             icon={FileCheck}
             variant="warning"
@@ -98,29 +134,53 @@ export default function AdminDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-stag-light/50 to-transparent border border-gray-100 hover:border-stag-blue/30 transition-colors cursor-pointer group">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-stag-blue to-stag-navy flex items-center justify-center text-white font-bold shadow-premium-sm group-hover:shadow-premium-md transition-shadow">
-                  ZW
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-stag-navy">Zhang Wei</p>
-                  <p className="text-sm text-gray-500">€250,000 invested</p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
-                    Active
-                  </span>
-                  <span className="text-xs text-gray-400">Joined Nov 2024</span>
-                </div>
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-stag-blue" />
               </div>
-
-              {/* Empty state placeholder */}
+            ) : recentInvestors.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">More investors will appear here</p>
+                <p className="text-sm">No investors yet</p>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                {recentInvestors.map((investor) => {
+                  const totalInvested = investor.investments?.reduce((sum: number, inv: any) => sum + inv.amount, 0) || 0
+                  const hasActiveInvestment = investor.investments?.some((inv: any) => inv.status === 'active')
+
+                  return (
+                    <div
+                      key={investor.id}
+                      className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-stag-light/50 to-transparent border border-gray-100 hover:border-stag-blue/30 transition-colors cursor-pointer group"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-stag-blue to-stag-navy flex items-center justify-center text-white font-bold shadow-premium-sm group-hover:shadow-premium-md transition-shadow">
+                        {investor.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-stag-navy">{investor.full_name}</p>
+                        <p className="text-sm text-gray-500">€{totalInvested.toLocaleString()} invested</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                          hasActiveInvestment
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {hasActiveInvestment ? 'Active' : 'Inactive'}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          Joined {new Date(investor.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -193,7 +253,13 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/70 text-sm">Total AUM</p>
-                    <p className="text-2xl font-bold">€250,000</p>
+                    <p className="text-2xl font-bold">
+                      {dataLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-white inline" />
+                      ) : (
+                        `€${stats.totalCapital.toLocaleString()}`
+                      )}
+                    </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
                     <TrendingUp className="w-6 h-6" />

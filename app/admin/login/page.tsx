@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { verifyAdmin } from '@/lib/actions/auth'
@@ -18,33 +18,71 @@ export default function AdminLoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Check if user is already authenticated
+  useEffect(() => {
+    console.log('🔵 [Admin Login] Component mounted, checking existing session...')
+    async function checkUser() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        console.log('✅ [Admin Login] User already authenticated:', user.email)
+        const result = await verifyAdmin(user.email!)
+        if (result.success) {
+          console.log('✅ [Admin Login] User is admin, redirecting to dashboard...')
+          router.push('/admin/dashboard')
+        } else {
+          console.log('⚠️ [Admin Login] User authenticated but not admin')
+        }
+      } else {
+        console.log('ℹ️ [Admin Login] No existing session found')
+      }
+    }
+    checkUser()
+  }, [router, supabase])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔵 [Admin Login] Form submitted')
     setLoading(true)
     setError(null)
 
     try {
+      console.log('🔵 [Admin Login] Attempting authentication...')
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('🔴 [Admin Login] Authentication failed:', error)
+        throw error
+      }
 
+      console.log('✅ [Admin Login] Authentication successful:', {
+        userId: data.user.id,
+        email: data.user.email
+      })
+
+      console.log('🔵 [Admin Login] Verifying admin status...')
       const result = await verifyAdmin(data.user.email!)
+      console.log('🔵 [Admin Login] Admin verification result:', result)
 
       if (!result.success) {
+        console.error('🔴 [Admin Login] Admin verification failed')
         setError('Access denied. Admin accounts only.')
         await supabase.auth.signOut()
         return
       }
 
+      console.log('✅ [Admin Login] Admin verified. Redirecting to dashboard...')
       router.push('/admin/dashboard')
+      console.log('🔵 [Admin Login] router.push called')
       router.refresh()
+      console.log('🔵 [Admin Login] router.refresh called')
     } catch (error: any) {
-      console.error('Admin login error:', error)
+      console.error('🔴 [Admin Login] Login error:', error)
       setError(error.message || 'An error occurred during login')
     } finally {
+      console.log('🔵 [Admin Login] Login process completed. Loading state set to false')
       setLoading(false)
     }
   }

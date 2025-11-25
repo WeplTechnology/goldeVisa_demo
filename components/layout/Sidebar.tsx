@@ -46,6 +46,7 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
   const adminNavItems: NavItem[] = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Investors', href: '/admin/investors', icon: Users },
+    { label: 'Golden Visa', href: '/admin/golden-visa', icon: Shield },
     { label: 'Properties', href: '/admin/properties', icon: Building2 },
     { label: 'Documents', href: '/admin/documents', icon: FileText },
     { label: 'Reports', href: '/admin/reports', icon: TrendingUp },
