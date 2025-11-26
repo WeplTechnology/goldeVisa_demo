@@ -74,7 +74,7 @@ export async function analyzePropertyWithAI(propertyData: {
   address: string
   acquisition_price: number
   current_value: number
-  total_size_sqm: number
+  total_size_sqm: number | null
   total_units: number
   status: string
 }): Promise<{
@@ -85,7 +85,13 @@ export async function analyzePropertyWithAI(propertyData: {
   try {
     console.log('🤖 Analyzing property with AI:', propertyData.name)
 
-    const analysis = await analyzeProperty(propertyData)
+    // Asegurar que total_size_sqm tenga un valor, usar 100 por defecto si es null
+    const propertyWithSize = {
+      ...propertyData,
+      total_size_sqm: propertyData.total_size_sqm ?? 100
+    }
+
+    const analysis = await analyzeProperty(propertyWithSize)
 
     console.log('✅ AI Analysis completed. Score:', analysis.aiScore)
 

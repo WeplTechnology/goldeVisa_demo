@@ -379,7 +379,7 @@ export default function AdminGoldenVisaPage() {
 
                     {/* Timeline */}
                     <div className="mb-4 pl-[60px]">
-                      <GoldenVisaTimeline currentStep={application.current_step} />
+                      <GoldenVisaTimeline />
                     </div>
 
                     {/* Actions */}

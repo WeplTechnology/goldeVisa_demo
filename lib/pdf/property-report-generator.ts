@@ -15,23 +15,23 @@ interface PropertyData {
   country: string
   acquisition_price: number
   current_value: number
-  total_size_sqm: number
+  total_size_sqm: number | null
   total_units: number
   status: string
 }
 
 // Colores de marca STAG
 const COLORS = {
-  primary: [17, 38, 93], // Navy
-  secondary: [41, 128, 185], // Blue
-  accent: [255, 193, 7], // Gold
-  success: [16, 185, 129], // Emerald
-  warning: [251, 146, 60], // Amber
-  danger: [239, 68, 68], // Red
-  text: [55, 65, 81], // Gray-700
-  lightGray: [243, 244, 246], // Gray-100
-  white: [255, 255, 255]
-}
+  primary: [17, 38, 93] as const, // Navy
+  secondary: [41, 128, 185] as const, // Blue
+  accent: [255, 193, 7] as const, // Gold
+  success: [16, 185, 129] as const, // Emerald
+  warning: [251, 146, 60] as const, // Amber
+  danger: [239, 68, 68] as const, // Red
+  text: [55, 65, 81] as const, // Gray-700
+  lightGray: [243, 244, 246] as const, // Gray-100
+  white: [255, 255, 255] as const
+} as const
 
 export class PropertyReportGenerator {
   private doc: jsPDF
@@ -106,11 +106,11 @@ export class PropertyReportGenerator {
     const centerX = this.pageWidth / 2
 
     // Background header
-    this.doc.setFillColor(...COLORS.primary)
+    this.doc.setFillColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2])
     this.doc.rect(0, 0, this.pageWidth, 80, 'F')
 
     // Logo / Título STAG
-    this.doc.setTextColor(...COLORS.white)
+    this.doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
     this.doc.setFontSize(32)
     this.doc.setFont('helvetica', 'bold')
     this.doc.text('STAG', centerX, 35, { align: 'center' })
@@ -123,11 +123,11 @@ export class PropertyReportGenerator {
     this.doc.text('Golden Visa Investment Report', centerX, 55, { align: 'center' })
 
     // Tipo de documento
-    this.doc.setFillColor(...COLORS.accent)
+    this.doc.setFillColor(COLORS.accent[0], COLORS.accent[1], COLORS.accent[2])
     this.doc.rect(this.margin, 90, this.pageWidth - 2 * this.margin, 1, 'F')
 
     // Nombre de la propiedad
-    this.doc.setTextColor(...COLORS.text)
+    this.doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2])
     this.doc.setFontSize(24)
     this.doc.setFont('helvetica', 'bold')
     const propertyName = this.wrapText(property.name, this.pageWidth - 2 * this.margin)
@@ -140,14 +140,14 @@ export class PropertyReportGenerator {
     this.doc.text(`${property.city}, ${property.country}`, centerX, 125, { align: 'center' })
 
     // AI Score Badge
-    const scoreColor = analysis.aiScore >= 85 ? COLORS.success :
+    const scoreColor: readonly [number, number, number] = analysis.aiScore >= 85 ? COLORS.success :
                        analysis.aiScore >= 70 ? COLORS.secondary :
                        analysis.aiScore >= 50 ? COLORS.warning : COLORS.danger
 
-    this.doc.setFillColor(...scoreColor)
+    this.doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2])
     this.doc.roundedRect(centerX - 30, 140, 60, 25, 3, 3, 'F')
 
-    this.doc.setTextColor(...COLORS.white)
+    this.doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
     this.doc.setFontSize(28)
     this.doc.setFont('helvetica', 'bold')
     this.doc.text(`${analysis.aiScore}`, centerX, 153, { align: 'center' })
@@ -157,27 +157,32 @@ export class PropertyReportGenerator {
     this.doc.text('AI SCORE', centerX, 161, { align: 'center' })
 
     // Recomendación
-    const recColor = analysis.recommendation === 'COMPRAR' ? COLORS.success :
+    const recColor: readonly [number, number, number] = analysis.recommendation === 'COMPRAR' ? COLORS.success :
                      analysis.recommendation === 'ANALIZAR' ? COLORS.warning : COLORS.danger
 
-    this.doc.setFillColor(...recColor)
+    this.doc.setFillColor(recColor[0], recColor[1], recColor[2])
     this.doc.roundedRect(centerX - 25, 175, 50, 12, 2, 2, 'F')
 
-    this.doc.setTextColor(...COLORS.white)
+    this.doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
     this.doc.setFontSize(12)
     this.doc.setFont('helvetica', 'bold')
     this.doc.text(analysis.recommendation, centerX, 183, { align: 'center' })
 
     // Información básica
-    this.doc.setTextColor(...COLORS.text)
+    this.doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2])
     this.doc.setFontSize(11)
     this.doc.setFont('helvetica', 'normal')
 
+    const sizeDisplay = property.total_size_sqm ?? 100
+    const pricePerSqm = property.total_size_sqm
+      ? (property.current_value / property.total_size_sqm).toFixed(0)
+      : 'N/A'
+
     const basicInfo = [
       `Valor actual: €${property.current_value.toLocaleString()}`,
-      `Superficie: ${property.total_size_sqm} m²`,
+      `Superficie: ${sizeDisplay} m²`,
       `Unidades: ${property.total_units}`,
-      `Precio/m²: €${(property.current_value / property.total_size_sqm).toFixed(0)}/m²`
+      `Precio/m²: €${pricePerSqm}/m²`
     ]
 
     let infoY = 210
@@ -202,7 +207,7 @@ export class PropertyReportGenerator {
     // Razonamiento del análisis
     this.doc.setFontSize(10)
     this.doc.setFont('helvetica', 'normal')
-    this.doc.setTextColor(...COLORS.text)
+    this.doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2])
 
     const reasoning = this.wrapText(analysis.reasoning, this.pageWidth - 2 * this.margin)
     const lines = this.doc.splitTextToSize(reasoning, this.pageWidth - 2 * this.margin)
@@ -226,9 +231,9 @@ export class PropertyReportGenerator {
         ['Ciudad', `${property.city}, ${property.country}`],
         ['Valor Actual', `€${property.current_value.toLocaleString()}`],
         ['Precio de Adquisición', `€${property.acquisition_price.toLocaleString()}`],
-        ['Superficie Total', `${property.total_size_sqm} m²`],
+        ['Superficie Total', `${property.total_size_sqm ?? 100} m²`],
         ['Número de Unidades', property.total_units.toString()],
-        ['Precio por m²', `€${(property.current_value / property.total_size_sqm).toFixed(0)}`],
+        ['Precio por m²', property.total_size_sqm ? `€${(property.current_value / property.total_size_sqm).toFixed(0)}` : 'N/A'],
         ['Estado', property.status]
       ],
       theme: 'striped',
@@ -306,7 +311,7 @@ export class PropertyReportGenerator {
                           analysis.comparables.pricePosition === 'at' ? 'En línea con el mercado' :
                           'Por encima del mercado'
 
-    const positionColor = analysis.comparables.pricePosition === 'below' ? COLORS.success :
+    const positionColor: readonly [number, number, number] = analysis.comparables.pricePosition === 'below' ? COLORS.success :
                           analysis.comparables.pricePosition === 'at' ? COLORS.secondary :
                           COLORS.warning
 
@@ -315,7 +320,7 @@ export class PropertyReportGenerator {
       head: [['Indicador', 'Valor']],
       body: [
         ['Precio promedio zona', `€${analysis.comparables.averagePricePerSqm.toLocaleString()}/m²`],
-        ['Precio esta propiedad', `€${(property.current_value / property.total_size_sqm).toFixed(0)}/m²`],
+        ['Precio esta propiedad', property.total_size_sqm ? `€${(property.current_value / property.total_size_sqm).toFixed(0)}/m²` : 'N/A'],
         ['Diferencia', `${analysis.comparables.percentageDifference > 0 ? '+' : ''}${analysis.comparables.percentageDifference}%`],
         ['Posición', pricePosition],
         ['Precio ideal de compra', `€${analysis.idealPurchasePrice.toLocaleString()}`],
@@ -332,9 +337,9 @@ export class PropertyReportGenerator {
       didDrawCell: (data) => {
         if (data.row.index === 3 && data.column.index === 1) {
           // Colorear la celda de posición
-          this.doc.setFillColor(...positionColor)
+          this.doc.setFillColor(positionColor[0], positionColor[1], positionColor[2])
           this.doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F')
-          this.doc.setTextColor(...COLORS.white)
+          this.doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
           this.doc.text(pricePosition, data.cell.x + 2, data.cell.y + 5)
         }
       },
@@ -355,7 +360,7 @@ export class PropertyReportGenerator {
     this.addSubsectionTitle(`Location Score: ${analysis.locationScore.score}/100`)
 
     this.doc.setFontSize(10)
-    this.doc.setTextColor(...COLORS.text)
+    this.doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2])
     this.doc.text(analysis.locationScore.development, this.margin, this.currentY)
     this.currentY += 10
 
@@ -413,11 +418,11 @@ export class PropertyReportGenerator {
         didDrawCell: (data) => {
           if (data.column.index === 1 && data.row.section === 'body') {
             const severity = analysis.risks[data.row.index].severity
-            const color = severity === 'high' ? COLORS.danger :
+            const color: readonly [number, number, number] = severity === 'high' ? COLORS.danger :
                          severity === 'medium' ? COLORS.warning : COLORS.secondary
-            this.doc.setFillColor(...color)
+            this.doc.setFillColor(color[0], color[1], color[2])
             this.doc.roundedRect(data.cell.x + 2, data.cell.y + 2, data.cell.width - 4, data.cell.height - 4, 1, 1, 'F')
-            this.doc.setTextColor(...COLORS.white)
+            this.doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
             this.doc.setFontSize(9)
             const text = severity === 'high' ? 'Alto' : severity === 'medium' ? 'Medio' : 'Bajo'
             this.doc.text(text, data.cell.x + data.cell.width / 2, data.cell.y + 5, { align: 'center' })
@@ -437,13 +442,13 @@ export class PropertyReportGenerator {
       this.addSubsectionTitle('Oportunidades de Inversión')
 
       this.doc.setFontSize(10)
-      this.doc.setTextColor(...COLORS.text)
+      this.doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2])
 
       analysis.opportunities.forEach((opp, index) => {
         this.checkPageBreak()
 
         // Bullet point
-        this.doc.setFillColor(...COLORS.success)
+        this.doc.setFillColor(COLORS.success[0], COLORS.success[1], COLORS.success[2])
         this.doc.circle(this.margin + 2, this.currentY - 1.5, 1.5, 'F')
 
         // Texto de la oportunidad
@@ -461,10 +466,10 @@ export class PropertyReportGenerator {
   private addSectionTitle(title: string): void {
     this.checkPageBreak(20)
 
-    this.doc.setFillColor(...COLORS.primary)
+    this.doc.setFillColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2])
     this.doc.rect(this.margin, this.currentY - 5, this.pageWidth - 2 * this.margin, 10, 'F')
 
-    this.doc.setTextColor(...COLORS.white)
+    this.doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
     this.doc.setFontSize(14)
     this.doc.setFont('helvetica', 'bold')
     this.doc.text(title, this.margin + 3, this.currentY + 1)
@@ -475,7 +480,7 @@ export class PropertyReportGenerator {
   private addSubsectionTitle(title: string): void {
     this.checkPageBreak(15)
 
-    this.doc.setTextColor(...COLORS.text)
+    this.doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2])
     this.doc.setFontSize(12)
     this.doc.setFont('helvetica', 'bold')
     this.doc.text(title, this.margin, this.currentY)
@@ -495,13 +500,13 @@ export class PropertyReportGenerator {
   }
 
   private addFooterToAllPages(): void {
-    const pageCount = this.doc.getNumberOfPages()
+    const pageCount = (this.doc as any).getNumberOfPages()
 
     for (let i = 1; i <= pageCount; i++) {
-      this.doc.setPage(i)
+      (this.doc as any).setPage(i)
 
       // Línea divisoria
-      this.doc.setDrawColor(...COLORS.lightGray)
+      this.doc.setDrawColor(COLORS.lightGray[0], COLORS.lightGray[1], COLORS.lightGray[2])
       this.doc.line(this.margin, this.pageHeight - 15, this.pageWidth - this.margin, this.pageHeight - 15)
 
       // Texto del footer
