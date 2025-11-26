@@ -25,6 +25,7 @@ interface GoldenVisaMilestoneData {
 
 interface GoldenVisaTimelineProps {
   milestones?: GoldenVisaMilestoneData[]
+  currentStep?: number
 }
 
 // Map milestone types to icons
@@ -106,18 +107,34 @@ const defaultMilestones: Milestone[] = [
   },
 ]
 
-export function GoldenVisaTimeline({ milestones: data }: GoldenVisaTimelineProps) {
-  // Convert database milestones to component format
-  const milestones: Milestone[] = data && data.length > 0
-    ? data.map(m => ({
-        id: m.id,
-        title: m.title,
-        description: m.description,
-        status: getMilestoneStatus(m.status),
-        date: formatDate(m.completed_date || m.due_date),
-        icon: getIconForType(m.milestone_type)
-      }))
-    : defaultMilestones
+// Generate milestones based on currentStep number
+const generateMilestonesFromStep = (currentStep: number): Milestone[] => {
+  return defaultMilestones.map((milestone, index) => ({
+    ...milestone,
+    status: index < currentStep - 1 ? 'completed' as const : 
+            index === currentStep - 1 ? 'current' as const : 
+            'pending' as const
+  }))
+}
+
+export function GoldenVisaTimeline({ milestones: data, currentStep }: GoldenVisaTimelineProps) {
+  // Convert database milestones to component format or use currentStep
+  let milestones: Milestone[]
+  
+  if (data && data.length > 0) {
+    milestones = data.map(m => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      status: getMilestoneStatus(m.status),
+      date: formatDate(m.completed_date || m.due_date),
+      icon: getIconForType(m.milestone_type)
+    }))
+  } else if (currentStep !== undefined) {
+    milestones = generateMilestonesFromStep(currentStep)
+  } else {
+    milestones = defaultMilestones
+  }
 
   const completedCount = milestones.filter(m => m.status === 'completed').length
   const progress = milestones.length > 0 ? (completedCount / milestones.length) * 100 : 0
