@@ -18,8 +18,8 @@ interface PropertyAIAnalysisModalProps {
     country: string
     acquisition_price: number
     current_value: number
-    total_size_sqm: number
-    total_units: number
+    total_size_sqm: number | null
+    total_units: number | null
     status: string
   }
   isOpen: boolean
@@ -58,7 +58,13 @@ export function PropertyAIAnalysisModal({ property, isOpen, onClose }: PropertyA
     setError(null)
 
     try {
-      const result = await analyzePropertyWithAI(property)
+      // Normalize property data for analysis
+      const propertyForAnalysis = {
+        ...property,
+        total_size_sqm: property.total_size_sqm ?? 0,
+        total_units: property.total_units ?? 0
+      }
+      const result = await analyzePropertyWithAI(propertyForAnalysis)
 
       if (result.success && result.analysis) {
         setAnalysis(result.analysis)
@@ -95,7 +101,13 @@ export function PropertyAIAnalysisModal({ property, isOpen, onClose }: PropertyA
     if (!analysis) return
 
     try {
-      generatePropertyReport(property, analysis, true)
+      // Normalize property data for report
+      const propertyForReport = {
+        ...property,
+        total_size_sqm: property.total_size_sqm ?? 0,
+        total_units: property.total_units ?? 0
+      }
+      generatePropertyReport(propertyForReport, analysis, true)
     } catch (error) {
       console.error('Error generating PDF:', error)
       alert('Error al generar el reporte PDF. Por favor intenta de nuevo.')
@@ -138,7 +150,7 @@ export function PropertyAIAnalysisModal({ property, isOpen, onClose }: PropertyA
               Nuestro modelo de IA analizará esta propiedad y generará recomendaciones de inversión basadas en datos del mercado italiano.
             </p>
             <Button
-              onClick={handleAnalyze}
+              onClick={() => handleAnalyze()}
               className="bg-stag-blue hover:bg-stag-navy"
             >
               <TrendingUp className="w-4 h-4 mr-2" />
@@ -160,7 +172,7 @@ export function PropertyAIAnalysisModal({ property, isOpen, onClose }: PropertyA
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 font-semibold mb-2">Error en el análisis</p>
             <p className="text-gray-600 text-sm mb-4">{error}</p>
-            <Button onClick={handleAnalyze} variant="outline">
+            <Button onClick={() => handleAnalyze()} variant="outline">
               Reintentar
             </Button>
           </div>
