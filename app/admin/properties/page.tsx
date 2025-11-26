@@ -19,18 +19,21 @@ import {
   Eye
 } from 'lucide-react'
 import { getAllProperties } from '@/lib/actions/admin-actions'
+import { PropertyAIAnalysisModal } from '@/components/admin/PropertyAIAnalysisModal'
 
 interface Property {
   id: string
   name: string
-  location: string
-  property_type: string
-  price: number
-  size_sqm: number | null
+  address: string
+  city: string
+  country: string
+  acquisition_price: number
+  current_value: number
+  total_size_sqm: number | null
+  total_units: number
   status: string
-  description: string | null
-  image_url: string | null
   created_at: string
+  images?: string[]
   investments: Array<{
     id: string
     amount: number
@@ -47,24 +50,36 @@ export default function AdminPropertiesPage() {
   const [dataLoading, setDataLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
+  const [showAIModal, setShowAIModal] = useState(false)
 
   useEffect(() => {
-    async function loadProperties() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadProperties() {
       try {
         setDataLoading(true)
         const data = await getAllProperties()
-        setProperties(data as Property[])
+        if (mounted) {
+          setProperties(data as Property[])
+        }
       } catch (error) {
         console.error('Error loading properties:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadProperties()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (
@@ -85,7 +100,8 @@ export default function AdminPropertiesPage() {
   const filteredProperties = properties.filter(property => {
     const matchesSearch =
       property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      property.location.toLowerCase().includes(searchQuery.toLowerCase())
+      property.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      property.address.toLowerCase().includes(searchQuery.toLowerCase())
 
     if (selectedStatus === 'all') return matchesSearch
 
@@ -93,7 +109,7 @@ export default function AdminPropertiesPage() {
   })
 
   const totalProperties = properties.length
-  const totalValue = properties.reduce((sum, prop) => sum + prop.price, 0)
+  const totalValue = properties.reduce((sum, prop) => sum + (prop.current_value || prop.acquisition_price || 0), 0)
   const totalInvestors = properties.reduce((sum, prop) => sum + (prop.investments?.length || 0), 0)
 
   const getStatusColor = (status: string) => {
@@ -231,7 +247,8 @@ export default function AdminPropertiesPage() {
         ) : (
           filteredProperties.map((property, index) => {
             const totalInvested = property.investments?.reduce((sum, inv) => sum + inv.amount, 0) || 0
-            const investmentProgress = (totalInvested / property.price) * 100
+            const propertyValue = property.current_value || property.acquisition_price || 0
+            const investmentProgress = propertyValue ? (totalInvested / propertyValue) * 100 : 0
 
             return (
               <Card
@@ -241,9 +258,9 @@ export default function AdminPropertiesPage() {
               >
                 {/* Property Image */}
                 <div className="relative h-48 bg-gradient-to-br from-stag-navy to-stag-blue overflow-hidden">
-                  {property.image_url ? (
+                  {property.images && property.images.length > 0 ? (
                     <img
-                      src={property.image_url}
+                      src={property.images[0]}
                       alt={property.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -257,6 +274,13 @@ export default function AdminPropertiesPage() {
                       {property.status.toUpperCase()}
                     </Badge>
                   </div>
+                  {/* Image count badge */}
+                  {property.images && property.images.length > 1 && (
+                    <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      {property.images.length}
+                    </div>
+                  )}
                 </div>
 
                 <CardContent className="pt-6 space-y-4">
@@ -265,17 +289,17 @@ export default function AdminPropertiesPage() {
                     <h3 className="font-bold text-lg text-stag-navy mb-2 line-clamp-1">{property.name}</h3>
                     <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
                       <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">{property.location}</span>
+                      <span className="line-clamp-1">{property.city}, {property.country}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Type:</span>
-                      <span className="font-medium text-gray-700">{property.property_type}</span>
+                      <span className="text-gray-500">Units:</span>
+                      <span className="font-medium text-gray-700">{property.total_units} units</span>
                     </div>
-                    {property.size_sqm && (
+                    {property.total_size_sqm && (
                       <div className="flex items-center justify-between text-sm mt-1">
                         <span className="text-gray-500">Size:</span>
-                        <span className="font-medium text-gray-700">{property.size_sqm} m²</span>
+                        <span className="font-medium text-gray-700">{property.total_size_sqm} m²</span>
                       </div>
                     )}
                   </div>
@@ -294,7 +318,7 @@ export default function AdminPropertiesPage() {
                     </div>
                     <div className="flex justify-between items-center mt-2 text-xs">
                       <span className="text-gray-500">€{totalInvested.toLocaleString()}</span>
-                      <span className="text-gray-500">€{property.price.toLocaleString()}</span>
+                      <span className="text-gray-500">€{propertyValue.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -302,7 +326,7 @@ export default function AdminPropertiesPage() {
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Price</p>
-                      <p className="text-sm font-bold text-stag-navy">€{(property.price / 1000).toFixed(0)}K</p>
+                      <p className="text-sm font-bold text-stag-navy">€{(propertyValue / 1000).toFixed(0)}K</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Investors</p>
@@ -315,9 +339,13 @@ export default function AdminPropertiesPage() {
                     variant="outline"
                     className="w-full hover:bg-stag-light hover:border-stag-blue"
                     size="sm"
+                    onClick={() => {
+                      setSelectedProperty(property)
+                      setShowAIModal(true)
+                    }}
                   >
                     <Eye className="w-4 h-4 mr-2" />
-                    View Details
+                    AI Analysis
                   </Button>
                 </CardContent>
               </Card>
@@ -325,6 +353,18 @@ export default function AdminPropertiesPage() {
           })
         )}
       </div>
+
+      {/* AI Analysis Modal */}
+      {selectedProperty && (
+        <PropertyAIAnalysisModal
+          property={selectedProperty}
+          isOpen={showAIModal}
+          onClose={() => {
+            setShowAIModal(false)
+            setSelectedProperty(null)
+          }}
+        />
+      )}
     </DashboardLayout>
   )
 }

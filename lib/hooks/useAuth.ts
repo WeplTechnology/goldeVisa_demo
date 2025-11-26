@@ -24,7 +24,10 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      router.refresh()
+      // Only refresh on sign out to avoid infinite loops
+      if (_event === 'SIGNED_OUT') {
+        router.push('/login')
+      }
     })
 
     return () => subscription.unsubscribe()

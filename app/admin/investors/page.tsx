@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +42,7 @@ interface Investor {
 }
 
 export default function AdminInvestorsPage() {
+  const router = useRouter()
   const { user, loading } = useAuth()
   const [investors, setInvestors] = useState<Investor[]>([])
   const [dataLoading, setDataLoading] = useState(true)
@@ -48,22 +50,32 @@ export default function AdminInvestorsPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
 
   useEffect(() => {
-    async function loadInvestors() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadInvestors() {
       try {
         setDataLoading(true)
         const data = await getAllInvestors()
-        setInvestors(data as Investor[])
+        if (mounted) {
+          setInvestors(data as Investor[])
+        }
       } catch (error) {
         console.error('Error loading investors:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadInvestors()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (
@@ -301,6 +313,7 @@ export default function AdminInvestorsPage() {
                         variant="outline"
                         size="sm"
                         className="hover:bg-stag-light hover:border-stag-blue"
+                        onClick={() => router.push(`/admin/investors/${investor.id}`)}
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         View Details

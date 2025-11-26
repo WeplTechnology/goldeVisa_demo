@@ -31,9 +31,11 @@ export default function AdminDashboardPage() {
   const [recentInvestments, setRecentInvestments] = useState<any[]>([])
 
   useEffect(() => {
-    async function loadData() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadData() {
       try {
         setDataLoading(true)
         const [statsData, investorsData, investmentsData] = await Promise.all([
@@ -42,18 +44,26 @@ export default function AdminDashboardPage() {
           getAllInvestments()
         ])
 
-        setStats(statsData)
-        setRecentInvestors(investorsData.slice(0, 3))
-        setRecentInvestments(investmentsData.slice(0, 5))
+        if (mounted) {
+          setStats(statsData)
+          setRecentInvestors(investorsData.slice(0, 3))
+          setRecentInvestments(investmentsData.slice(0, 5))
+        }
       } catch (error) {
         console.error('Error loading admin data:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadData()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (

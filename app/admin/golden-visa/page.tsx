@@ -45,22 +45,33 @@ export default function AdminGoldenVisaPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadApplications() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadApplications() {
       try {
         setDataLoading(true)
         const data = await getAllGoldenVisaApplications()
-        setApplications(data as VisaApplication[])
+
+        if (mounted) {
+          setApplications(data as VisaApplication[])
+        }
       } catch (error) {
         console.error('Error loading applications:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadApplications()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (

@@ -52,22 +52,32 @@ export default function AdminDocumentsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadDocuments() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadDocuments() {
       try {
         setDataLoading(true)
         const data = await getAllDocuments()
-        setDocuments(data as Document[])
+        if (mounted) {
+          setDocuments(data as Document[])
+        }
       } catch (error) {
         console.error('Error loading documents:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadDocuments()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (

@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Loader2,
   Upload,
@@ -31,22 +30,8 @@ import {
   getRequiredDocumentsChecklist,
   deleteDocument,
   getDocumentDownloadUrl,
-  type DocumentData
 } from '@/lib/actions/document-actions'
-import { formatFileSize, getFileTypeLabel } from '@/lib/utils/file-utils'
-
-interface Document {
-  id: string
-  name: string
-  category: 'identity' | 'financial' | 'property' | 'legal' | 'other'
-  status: 'pending' | 'approved' | 'rejected'
-  uploadDate: string
-  size: string
-  type: string
-  verifiedBy?: string
-  verifiedDate?: string
-  notes?: string
-}
+import { transformDocumentData, type TransformedDocument as Document } from '@/lib/utils/document-utils'
 
 export default function DocumentsPage() {
   const { user, loading } = useAuth()
@@ -73,30 +58,7 @@ export default function DocumentsPage() {
         ])
 
         // Transform DocumentData to Document format
-        const transformedDocs: Document[] = docsData.map(doc => ({
-          id: doc.id,
-          name: doc.name,
-          category: doc.category,
-          status: doc.status,
-          uploadDate: new Date(doc.uploaded_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          }),
-          size: formatFileSize(doc.file_size),
-          type: getFileTypeLabel(doc.file_type),
-          verifiedBy: doc.verified_by || undefined,
-          verifiedDate: doc.verified_at
-            ? new Date(doc.verified_at).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })
-            : undefined,
-          notes: doc.verification_notes || undefined
-        }))
-
-        setDocuments(transformedDocs)
+        setDocuments(transformDocumentData(docsData))
         setStats(statsData)
         setChecklist(checklistData)
       } catch (error) {
@@ -157,34 +119,12 @@ export default function DocumentsPage() {
       const result = await deleteDocument(documentId)
 
       if (result.success) {
-        // Reload documents
-        const docsData = await getInvestorDocuments()
-        const transformedDocs: Document[] = docsData.map(doc => ({
-          id: doc.id,
-          name: doc.name,
-          category: doc.category,
-          status: doc.status,
-          uploadDate: new Date(doc.uploaded_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          }),
-          size: formatFileSize(doc.file_size),
-          type: getFileTypeLabel(doc.file_type),
-          verifiedBy: doc.verified_by || undefined,
-          verifiedDate: doc.verified_at
-            ? new Date(doc.verified_at).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })
-            : undefined,
-          notes: doc.verification_notes || undefined
-        }))
-        setDocuments(transformedDocs)
-
-        // Reload stats
-        const statsData = await getDocumentStats()
+        // Reload documents and stats
+        const [docsData, statsData] = await Promise.all([
+          getInvestorDocuments(),
+          getDocumentStats()
+        ])
+        setDocuments(transformDocumentData(docsData))
         setStats(statsData)
       } else {
         alert(result.error || 'Failed to delete document')
@@ -307,94 +247,83 @@ export default function DocumentsPage() {
 
       {/* Documents List */}
       <Card className="card-premium animate-fade-in-up stagger-5">
-        <Tabs defaultValue="all" className="w-full">
-          <CardHeader className="border-b border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <CardTitle className="text-lg font-bold text-stag-navy">
-                Document Library
-              </CardTitle>
-              <TabsList className="bg-stag-light">
-                <TabsTrigger value="all" onClick={() => setSelectedCategory('all')}>
-                  All
-                </TabsTrigger>
-                <TabsTrigger value="identity" onClick={() => setSelectedCategory('identity')}>
-                  Identity
-                </TabsTrigger>
-                <TabsTrigger value="financial" onClick={() => setSelectedCategory('financial')}>
-                  Financial
-                </TabsTrigger>
-                <TabsTrigger value="property" onClick={() => setSelectedCategory('property')}>
-                  Property
-                </TabsTrigger>
-                <TabsTrigger value="legal" onClick={() => setSelectedCategory('legal')}>
-                  Legal
-                </TabsTrigger>
-              </TabsList>
-            </div>
+        <CardHeader className="border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <CardTitle className="text-lg font-bold text-stag-navy">
+              Document Library
+            </CardTitle>
 
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search documents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            {/* Category Filters */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('all')}
+                className={selectedCategory === 'all' ? 'bg-stag-blue' : ''}
+              >
+                All
+              </Button>
+              <Button
+                variant={selectedCategory === 'identity' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('identity')}
+                className={selectedCategory === 'identity' ? 'bg-stag-blue' : ''}
+              >
+                Identity
+              </Button>
+              <Button
+                variant={selectedCategory === 'financial' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('financial')}
+                className={selectedCategory === 'financial' ? 'bg-stag-blue' : ''}
+              >
+                Financial
+              </Button>
+              <Button
+                variant={selectedCategory === 'property' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('property')}
+                className={selectedCategory === 'property' ? 'bg-stag-blue' : ''}
+              >
+                Property
+              </Button>
+              <Button
+                variant={selectedCategory === 'legal' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('legal')}
+                className={selectedCategory === 'legal' ? 'bg-stag-blue' : ''}
+              >
+                Legal
+              </Button>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="pt-6">
-            {dataLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-stag-blue" />
-              </div>
-            ) : (
-              <>
-                <TabsContent value="all" className="mt-0">
-                  <DocumentsList
-                    documents={filteredDocuments}
-                    onDownload={handleDownload}
-                    onDelete={handleDelete}
-                    deletingId={deletingId}
-                  />
-                </TabsContent>
-                <TabsContent value="identity" className="mt-0">
-                  <DocumentsList
-                    documents={filteredDocuments}
-                    onDownload={handleDownload}
-                    onDelete={handleDelete}
-                    deletingId={deletingId}
-                  />
-                </TabsContent>
-                <TabsContent value="financial" className="mt-0">
-                  <DocumentsList
-                    documents={filteredDocuments}
-                    onDownload={handleDownload}
-                    onDelete={handleDelete}
-                    deletingId={deletingId}
-                  />
-                </TabsContent>
-                <TabsContent value="property" className="mt-0">
-                  <DocumentsList
-                    documents={filteredDocuments}
-                    onDownload={handleDownload}
-                    onDelete={handleDelete}
-                    deletingId={deletingId}
-                  />
-                </TabsContent>
-                <TabsContent value="legal" className="mt-0">
-                  <DocumentsList
-                    documents={filteredDocuments}
-                    onDownload={handleDownload}
-                    onDelete={handleDelete}
-                    deletingId={deletingId}
-                  />
-                </TabsContent>
-              </>
-            )}
-          </CardContent>
-        </Tabs>
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-6">
+          {dataLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-stag-blue" />
+            </div>
+          ) : (
+            <DocumentsList
+              documents={filteredDocuments}
+              onDownload={handleDownload}
+              onDelete={handleDelete}
+              deletingId={deletingId}
+            />
+          )}
+        </CardContent>
       </Card>
 
       {/* Required Documents Checklist */}

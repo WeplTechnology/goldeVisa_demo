@@ -1,11 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isAdminEmail } from '@/lib/utils/auth-helpers'
 
-// Helper para verificar si es admin
-function isAdminEmail(email: string | undefined): boolean {
-  if (!email) return false
-  return email.endsWith('@stagfund.com') || email.endsWith('@goldenvisa.com')
-}
+// Rutas protegidas consolidadas
+const INVESTOR_ROUTES = ['/dashboard', '/golden-visa', '/properties', '/documents', '/reports', '/messages', '/settings']
+const ADMIN_ROUTES = ['/admin']
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -64,46 +63,25 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Proteger rutas de inversor
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
+  const pathname = request.nextUrl.pathname
 
-  if (request.nextUrl.pathname.startsWith('/golden-visa') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (request.nextUrl.pathname.startsWith('/properties') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (request.nextUrl.pathname.startsWith('/documents') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (request.nextUrl.pathname.startsWith('/reports') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (request.nextUrl.pathname.startsWith('/messages') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (request.nextUrl.pathname.startsWith('/settings') && !user) {
+  // Proteger rutas de inversor - consolidado en una sola verificación
+  const isInvestorRoute = INVESTOR_ROUTES.some(route => pathname.startsWith(route))
+  if (isInvestorRoute && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // Proteger rutas de admin
-  if (request.nextUrl.pathname.startsWith('/admin') && !user) {
-    // Excepto la página de login de admin
-    if (request.nextUrl.pathname !== '/admin/login') {
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isAdminLoginPage = pathname === '/admin/login'
+
+  if (isAdminRoute && !isAdminLoginPage) {
+    if (!user) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
-  }
 
-  // Verificar que usuarios admin tengan email de dominio autorizado
-  if (request.nextUrl.pathname.startsWith('/admin') && user) {
-    if (request.nextUrl.pathname !== '/admin/login' && !isAdminEmail(user.email)) {
+    // Verificar que usuarios admin tengan email de dominio autorizado
+    if (!isAdminEmail(user.email)) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }

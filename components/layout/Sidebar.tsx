@@ -16,6 +16,7 @@ import {
   Users,
   Shield,
   Sparkles,
+  Bot,
 } from 'lucide-react'
 
 interface NavItem {
@@ -51,6 +52,7 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
     { label: 'Documents', href: '/admin/documents', icon: FileText },
     { label: 'Reports', href: '/admin/reports', icon: TrendingUp },
     { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
+    { label: 'AI Assistant', href: '/admin/ai-assistant', icon: Bot },
     { label: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 

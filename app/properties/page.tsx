@@ -39,9 +39,11 @@ export default function PropertiesPage() {
 
   // Load property data
   useEffect(() => {
-    async function loadData() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadData() {
       try {
         setDataLoading(true)
         const [units, portfolio] = await Promise.all([
@@ -49,17 +51,25 @@ export default function PropertiesPage() {
           getPortfolioSummary()
         ])
 
-        setPropertyUnits(units)
-        setPortfolioData(portfolio)
+        if (mounted) {
+          setPropertyUnits(units)
+          setPortfolioData(portfolio)
+        }
       } catch (error) {
         console.error('Error loading properties data:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadData()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (

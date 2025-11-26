@@ -20,24 +20,28 @@ export default function AdminLoginPage() {
 
   // Check if user is already authenticated
   useEffect(() => {
-    console.log('🔵 [Admin Login] Component mounted, checking existing session...')
+    let mounted = true
+
     async function checkUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        console.log('✅ [Admin Login] User already authenticated:', user.email)
-        const result = await verifyAdmin(user.email!)
-        if (result.success) {
-          console.log('✅ [Admin Login] User is admin, redirecting to dashboard...')
-          router.push('/admin/dashboard')
-        } else {
-          console.log('⚠️ [Admin Login] User authenticated but not admin')
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user && mounted) {
+          const result = await verifyAdmin(user.email!)
+          if (result.success && mounted) {
+            router.push('/admin/dashboard')
+          }
         }
-      } else {
-        console.log('ℹ️ [Admin Login] No existing session found')
+      } catch (error) {
+        console.error('Auth check failed:', error)
       }
     }
+
     checkUser()
-  }, [router, supabase])
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,10 +78,10 @@ export default function AdminLoginPage() {
       }
 
       console.log('✅ [Admin Login] Admin verified. Redirecting to dashboard...')
-      router.push('/admin/dashboard')
-      console.log('🔵 [Admin Login] router.push called')
+
+      // Refresh to sync server-side session then navigate
       router.refresh()
-      console.log('🔵 [Admin Login] router.refresh called')
+      router.push('/admin/dashboard')
     } catch (error: any) {
       console.error('🔴 [Admin Login] Login error:', error)
       setError(error.message || 'An error occurred during login')

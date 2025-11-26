@@ -23,12 +23,12 @@ interface Message {
   timestamp: Date
 }
 
-export default function MessagesPage() {
+export default function AdminAIAssistantPage() {
   const { user, loading: authLoading } = useAuth()
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I\'m your STAG AI Assistant. How can I help you today with your Golden Visa investment?',
+      content: 'Hello! I\'m your STAG Admin AI Assistant. I can help you with administrative tasks, investor queries, property management, and platform operations. How can I assist you today?',
       timestamp: new Date()
     }
   ])
@@ -61,11 +61,26 @@ export default function MessagesPage() {
     setError(null)
 
     try {
-      // Preparar historial de conversación
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }))
+      // Preparar historial de conversación con contexto de admin
+      const adminContext = `You are assisting an administrator of the STAG Fund Management Golden Visa platform.
+      Provide detailed, professional information about:
+      - Managing investor accounts and applications
+      - Property portfolio oversight
+      - Document verification and compliance
+      - Golden Visa application processing
+      - KYC/AML procedures
+      - Platform operations and workflows
+      - Investor communications best practices
+      - Reporting and analytics
+      Be concise but thorough, and prioritize operational efficiency.`
+
+      const conversationHistory = [
+        { role: 'system', content: adminContext },
+        ...messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      ]
 
       const response = await fetch('/api/gemini', {
         method: 'POST',
@@ -117,16 +132,17 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout
-      title="Messages"
-      subtitle="Chat with your AI assistant"
+      title="AI Assistant"
+      subtitle="Get help with admin tasks and operations"
+      isAdmin={true}
     >
       <div className="max-w-5xl mx-auto">
         {/* Info Banner */}
         <Alert className="mb-6 border-stag-blue/20 bg-stag-light/50">
           <Info className="h-4 w-4 text-stag-blue" />
           <AlertDescription className="text-sm text-stag-navy">
-            <strong className="font-semibold">STAG AI Assistant</strong> is powered by xAI Grok.
-            Ask anything about your Golden Visa investment, properties, or visa process.
+            <strong className="font-semibold">Admin AI Assistant</strong> is powered by xAI Grok.
+            Ask about investor management, platform operations, compliance, or any administrative task.
           </AlertDescription>
         </Alert>
 
@@ -142,7 +158,7 @@ export default function MessagesPage() {
               </div>
               <div>
                 <h3 className="font-bold text-stag-navy flex items-center gap-2">
-                  STAG AI Assistant
+                  Admin AI Assistant
                   <Sparkles className="w-4 h-4 text-stag-gold" />
                 </h3>
                 <p className="text-sm text-gray-500">Powered by xAI Grok</p>
@@ -233,7 +249,7 @@ export default function MessagesPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
+                placeholder="Ask about admin tasks, investor management, compliance... (Press Enter to send, Shift+Enter for new line)"
                 className="min-h-[60px] max-h-[120px] resize-none focus-visible:ring-stag-blue"
                 disabled={isLoading}
               />
@@ -250,7 +266,7 @@ export default function MessagesPage() {
               </Button>
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              AI responses may contain errors. For critical information, contact your account manager.
+              AI responses may contain errors. Always verify critical information before taking action.
             </p>
           </div>
         </Card>

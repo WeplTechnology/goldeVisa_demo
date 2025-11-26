@@ -41,20 +41,13 @@ export default function DashboardPage() {
   const [milestones, setMilestones] = useState<GoldenVisaMilestone[]>([])
   const [dataLoading, setDataLoading] = useState(true)
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        router.push('/login')
-      }
-    }, 3000)
-    return () => clearTimeout(timeout)
-  }, [loading, router])
-
   // Load investor data
   useEffect(() => {
-    async function loadData() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadData() {
       try {
         setDataLoading(true)
         const [portfolio, units, milestonesData] = await Promise.all([
@@ -63,18 +56,26 @@ export default function DashboardPage() {
           getGoldenVisaMilestones()
         ])
 
-        setPortfolioData(portfolio)
-        setPropertyUnits(units)
-        setMilestones(milestonesData)
+        if (mounted) {
+          setPortfolioData(portfolio)
+          setPropertyUnits(units)
+          setMilestones(milestonesData)
+        }
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadData()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (

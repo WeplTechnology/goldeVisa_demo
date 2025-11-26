@@ -61,8 +61,8 @@ export function InvestmentPieChart({ data: investmentData }: InvestmentPieChartP
   ]
 
   return (
-    <div className="relative w-full h-[280px]">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="relative w-full h-[280px] min-h-[280px]">
+      <ResponsiveContainer width="100%" height="100%" minHeight={280}>
         <PieChart>
           <Pie
             data={chartData}

@@ -47,8 +47,9 @@ export default function LoginPage() {
         return
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100))
-      window.location.href = '/dashboard'
+      // Refresh to sync server-side session then navigate
+      router.refresh()
+      router.push('/dashboard')
     } catch (error: any) {
       console.error('Login error:', error)
       setError(error.message || 'An error occurred during login')
@@ -232,6 +233,18 @@ export default function LoginPage() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Admin Access Link */}
+          <div className="mt-6">
+            <Button
+              variant="outline"
+              className="w-full border-2 border-stag-blue/20 text-stag-navy hover:bg-stag-blue hover:text-white hover:border-stag-blue transition-all duration-300 h-12 rounded-xl font-semibold"
+              onClick={() => router.push('/admin/login')}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              ¿Eres admin?
+            </Button>
+          </div>
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Need help?{' '}

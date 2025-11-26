@@ -26,11 +26,13 @@ async function verifyAdminAccess() {
  */
 export async function getAllInvestors() {
   try {
-    const { authorized, supabase, error } = await verifyAdminAccess()
+    const { authorized, supabase, user, error } = await verifyAdminAccess()
     if (!authorized) {
       console.error('Admin access denied:', error)
       return []
     }
+
+    console.log('🔑 getAllInvestors() - Auth user:', user?.email)
 
     const { data: investors, error: investorsError } = await supabase!
       .from('investors')
@@ -46,9 +48,13 @@ export async function getAllInvestors() {
       .order('created_at', { ascending: false })
 
     if (investorsError) {
-      console.error('Error fetching investors:', investorsError)
+      console.error('❌ Error fetching investors:', investorsError)
       return []
     }
+
+    console.log('✅ getAllInvestors() - Total:', investors?.length)
+    console.log('✅ First investor investments array:', investors?.[0]?.investments)
+    console.log('📊 Full first investor:', JSON.stringify(investors?.[0], null, 2).substring(0, 500))
 
     return investors || []
   } catch (error) {
@@ -127,8 +133,7 @@ export async function getAllInvestments() {
         ),
         fund:funds (
           id,
-          name,
-          target_amount
+          name
         )
       `)
       .order('investment_date', { ascending: false })
@@ -294,13 +299,17 @@ export async function getAdminStats() {
       .eq('status', 'pending')
       .is('deleted_at', null)
 
-    return {
+    const stats = {
       totalInvestors: investorsCount || 0,
       totalInvestments: investments?.length || 0,
       totalCapital,
       activeVisaApplications: visaCount || 0,
       pendingDocuments: docsCount || 0
     }
+
+    console.log('✅ getAdminStats():', JSON.stringify(stats, null, 2))
+
+    return stats
   } catch (error) {
     console.error('Exception fetching admin stats:', error)
     return {

@@ -37,9 +37,11 @@ export default function GoldenVisaPage() {
 
   // Load investor data
   useEffect(() => {
-    async function loadData() {
-      if (!user) return
+    if (!user?.id) return
 
+    let mounted = true
+
+    async function loadData() {
       try {
         setDataLoading(true)
         const [investor, milestonesData] = await Promise.all([
@@ -47,17 +49,25 @@ export default function GoldenVisaPage() {
           getGoldenVisaMilestones()
         ])
 
-        setInvestorData(investor)
-        setMilestones(milestonesData)
+        if (mounted) {
+          setInvestorData(investor)
+          setMilestones(milestonesData)
+        }
       } catch (error) {
         console.error('Error loading golden visa data:', error)
       } finally {
-        setDataLoading(false)
+        if (mounted) {
+          setDataLoading(false)
+        }
       }
     }
 
     loadData()
-  }, [user])
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   if (loading) {
     return (

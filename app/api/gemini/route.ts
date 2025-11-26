@@ -1,8 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextRequest, NextResponse } from 'next/server'
-
-// Inicializar Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,18 +11,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GROK_API_KEY) {
       return NextResponse.json(
-        { error: 'Gemini API key not configured' },
+        { error: 'Grok API key not configured' },
         { status: 500 }
       )
     }
 
-    // Usar el modelo Gemini 2.5 Flash (más reciente y rápido)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-
     // Construir el contexto de la conversación
-    const context = `You are STAG AI Assistant, a helpful assistant for the STAG Fund Management Golden Visa platform.
+    const systemContext = `You are STAG AI Assistant, a helpful assistant for the STAG Fund Management Golden Visa platform.
 You help investors with questions about their Golden Visa investment in Italy, real estate properties,
 visa process, documentation, and general investment queries.
 
@@ -41,32 +34,76 @@ Be professional, friendly, and provide accurate information about:
 
 Always be helpful and if you don't know something, recommend contacting their account manager.`
 
-    // Construir el prompt con historial
-    let fullPrompt = context + '\n\n'
+    // Construir mensajes para Grok API
+    const messages = [
+      {
+        role: 'system',
+        content: systemContext
+      }
+    ]
 
+    // Añadir historial de conversación
     if (conversationHistory && conversationHistory.length > 0) {
-      fullPrompt += 'Previous conversation:\n'
       conversationHistory.forEach((msg: { role: string; content: string }) => {
-        fullPrompt += `${msg.role === 'user' ? 'Investor' : 'Assistant'}: ${msg.content}\n`
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        })
       })
-      fullPrompt += '\n'
     }
 
-    fullPrompt += `Investor: ${message}\nAssistant:`
+    // Añadir mensaje actual
+    messages.push({
+      role: 'user',
+      content: message
+    })
 
-    // Generar respuesta
-    const result = await model.generateContent(fullPrompt)
-    const response = await result.response
-    const text = response.text()
+    // Llamar a Grok API
+    console.log('🚀 Calling Grok API with model: grok-3')
+    console.log('📝 Messages count:', messages.length)
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+      },
+      body: JSON.stringify({
+        messages,
+        model: 'grok-3',
+        stream: false,
+        temperature: 0.7
+      })
+    })
+
+    console.log('📊 Grok API Response Status:', response.status)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Grok API Error Response:', errorText)
+
+      let errorData
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        throw new Error(`Grok API error (${response.status}): ${errorText}`)
+      }
+
+      throw new Error(errorData.error?.message || errorData.message || 'Grok API request failed')
+    }
+
+    const data = await response.json()
+    console.log('✅ Grok API Success')
+    const assistantResponse = data.choices[0].message.content
 
     return NextResponse.json({
-      response: text,
+      response: assistantResponse,
       success: true,
     })
   } catch (error: any) {
-    console.error('Gemini API error:', error)
+    console.error('Grok API error:', error)
 
-    // Extraer detalles del error de Gemini
+    // Extraer detalles del error
     let errorMessage = error.message || 'Failed to generate response'
     let errorDetails = error.toString()
 

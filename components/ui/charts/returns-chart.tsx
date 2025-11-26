@@ -40,8 +40,8 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
 export function ReturnsChart() {
   return (
-    <div className="w-full h-[280px]">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-full h-[280px] min-h-[280px]">
+      <ResponsiveContainer width="100%" height="100%" minHeight={280}>
         <AreaChart
           data={data}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
